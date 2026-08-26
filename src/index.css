@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-white text-slate-900;
+  font-family: 'Montserrat';
+}
+
+/* ─── Responsive typography helpers ──────────────────────────────────────────
+   Used across pages to prevent H1/H2 collisions in the 768–1280px range.
+   Usage: class="text-hero"  → fluid scale from mobile → tablet → desktop
+   These @layer utilities are tree-shaken if unused, so adding them here
+   costs nothing for pages that define their own font sizes.
+─────────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Hero / H1 — 36px mobile → 48px tablet → 64px desktop */
+  .text-hero {
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    line-height: 1.1;
+  }
+
+  /* H2 section titles — 28px → 36px → 48px */
+  .text-section-title {
+    font-size: clamp(1.75rem, 3.5vw, 3rem);
+    line-height: 1.15;
+  }
+
+  /* H3 card / sub-section titles — 20px → 26px → 32px */
+  .text-card-title {
+    font-size: clamp(1.25rem, 2.5vw, 2rem);
+    line-height: 1.2;
+  }
+
+  /* Body copy — 15px → 16px → 18px */
+  .text-body-fluid {
+    font-size: clamp(0.9375rem, 1.5vw, 1.125rem);
+    line-height: 1.6;
+  }
+}
+
+/* ─── Global container guard ─────────────────────────────────────────────────
+   Prevents content from touching viewport edges at any width.
+   Apply with class="container-fluid" as an alternative to fixed px-[200px].
+─────────────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .container-fluid {
+    @apply w-full mx-auto px-4;
+    /* 4% side padding on tablet, capped at 200px equivalent on large screens */
+    padding-left: clamp(1rem, 4%, 12.5rem);
+    padding-right: clamp(1rem, 4%, 12.5rem);
+  }
+}
+
+/* ─── Conflict highlighting (calendar grid + dashboard alerts) ──────────────
+   .conflict-blink-red    → eventos en conflicto grave (team_overlap / over_capacity)
+   .conflict-blink-amber  → ítems de severidad baja en la lista de alertas
+   Sin animación se mantiene un estado estático bien visible (accesibilidad).
+─────────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .conflict-blink-red {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 1);
+  }
+  .conflict-blink-amber {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.9);
+  }
+}
+
+@keyframes conflict-blink-red {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 1); }
+  50%      { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); }
+}
+@keyframes conflict-blink-amber {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.9); }
+  50%      { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .conflict-blink-red { animation: conflict-blink-red 0.8s ease-in-out infinite; }
+  .conflict-blink-amber { animation: conflict-blink-amber 1.2s ease-in-out infinite; }
+}

@@ -1,0 +1,45 @@
+/* ─── Root container ──────────────────────────────────────────────────────────
+   Removed the original fixed `max-width: 1280px` + `padding: 2rem` on #root.
+   Those values were causing a hard layout jump at exactly 1280px and adding
+   unwanted horizontal padding that conflicted with full-bleed section backgrounds.
+
+   Page-level max-widths are now handled by each section/container individually,
+   which gives each page full control over its own width and bleed behavior.
+─────────────────────────────────────────────────────────────────────────────── */
+#root {
+  /* Full width — let each page/section own its own constraints */
+  width: 100%;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
