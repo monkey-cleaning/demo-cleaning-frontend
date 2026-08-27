@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Calendar, RefreshCw, ExternalLink, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, ExternalLink, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -117,12 +117,12 @@ interface CalEvent {
   endHour: number;
   durationH: number;
   organizer: string | null;
-  attendees: string[];
   clientId: string | null;
   htmlLink: string | null;
-  // LAB-233: recurringEventId is set on an instance (points to its series'
-  // master); recurrence is set only on the master itself (raw RRULE array).
-  recurringEventId: string | null;
+  // seriesId apunta al maestro de la serie (se auto-referencia si el propio
+  // evento ES el maestro); isSeriesMaster distingue maestro de instancia.
+  seriesId: string | null;
+  isSeriesMaster: boolean;
   recurrence: string[] | null;
   createdIso: string | null;
 }
@@ -254,22 +254,6 @@ async function apiFetchEmployee(id: string): Promise<{ id: string; name: string;
   return data.employee;
 }
 
-async function apiForceResync(year: number, month: number): Promise<void> {
-  const res = await fetch(
-    `${API_BASE}/api/calendar/sync/force?year=${year}&month=${month}`,
-    { method: "POST", headers: authHeaders() },
-  );
-  if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
-}
-
-async function apiForceResyncRange(startDate: string, endDate: string): Promise<void> {
-  const res = await fetch(
-    `${API_BASE}/api/calendar/sync/force?startDate=${startDate}&endDate=${endDate}`,
-    { method: "POST", headers: authHeaders() },
-  );
-  if (!res.ok) throw new Error(`Re-sync failed: HTTP ${res.status}`);
-}
-
 async function apiFetchMaxSimultaneousTeams(): Promise<number> {
   const res = await fetch(`${API_BASE}/api/admin/settings`, { headers: authHeaders() });
   if (!res.ok) return 2;
@@ -330,14 +314,14 @@ async function apiCheckConflictsBatch(
 async function apiCheckSeriesConflicts(
   slots: { startIso: string; endIso: string }[],
   colorId: string | null,
-  exclude?: { eventId?: string; recurringEventId?: string | null },
+  exclude?: { eventId?: string; seriesId?: string | null },
 ): Promise<{ dateIso: string; type: string; detail: string }[]> {
   const res = await fetch(`${API_BASE}/api/calendar/events/conflicts/series`, {
     method: "POST", headers: authHeaders(),
     body: JSON.stringify({
       slots, colorId,
       excludeEventId: exclude?.eventId,
-      excludeRecurringEventId: exclude?.recurringEventId,
+      excludeSeriesId: exclude?.seriesId,
     }),
   });
   if (!res.ok) {
@@ -939,7 +923,7 @@ function EventFormModal({
   const LOCAL_DT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
   const isEdit = !!event;
-  const isPartOfSeries = !!event?.recurringEventId;
+  const isPartOfSeries = !!event?.seriesId;
   const defaultStart = event?.startIso ? toLocalInput(event.startIso)
     : initialStart ? toLocalInput(initialStart)
       : duplicateFrom ? ""
@@ -1048,9 +1032,9 @@ function EventFormModal({
   // Precarga el patrón real de la serie cuando se edita una instancia (las
   // instancias nunca traen `recurrence` propio, solo el maestro lo tiene).
   useEffect(() => {
-    if (!isEdit || !isPartOfSeries || !event?.recurringEventId) return;
+    if (!isEdit || !isPartOfSeries || !event?.seriesId) return;
     let cancelled = false;
-    apiFetchSeriesRecurrence(event.recurringEventId)
+    apiFetchSeriesRecurrence(event.seriesId)
       .then(info => {
         if (cancelled || !info) return;
         setRecurrenceFreq(info.freq);
@@ -1083,13 +1067,13 @@ function EventFormModal({
 
       const conflicts = await apiCheckSeriesConflicts(slots, colorId || null, {
         eventId: event?.id,
-        recurringEventId: event?.recurringEventId ?? null,
+        seriesId: event?.seriesId ?? null,
       });
       setSeriesConflicts(conflicts);
       setCheckingConflicts(false);
     }, 400);
     return () => { clearTimeout(timer); setCheckingConflicts(false); };
-  }, [isEdit, recurrenceFreq, recurrenceEndType, recurrenceCount, recurrenceUntil, startVal, endVal, colorId, event?.id, event?.recurringEventId]);
+  }, [isEdit, recurrenceFreq, recurrenceEndType, recurrenceCount, recurrenceUntil, startVal, endVal, colorId, event?.id, event?.seriesId]);
   // notes — permanent notes about the client & the cleaning location
   // (door codes, property specs). Prefilled from DB, editable here, saved
   // back to the clients row (independent of the calendar event save).
@@ -1261,7 +1245,7 @@ function EventFormModal({
     // whether the change should apply to just this event or the whole series,
     // before doing any network work. Re-entered with the chosen scope once
     // RecurrenceScopeModal calls back.
-    if (isEdit && event?.recurringEventId && !pendingScopeChoice) {
+    if (isEdit && event?.seriesId && !pendingScopeChoice) {
       if (includeRecurrence) {
         // Un cambio de patrón solo tiene sentido para toda la serie —
         // se salta el picker de single/following/all.
@@ -1681,18 +1665,25 @@ function EventFormModal({
 // ── RecurrenceScopeModal ────────────────────────────────────────────────────────────
 
 function RecurrenceScopeModal({
-  action, onConfirm, onCancel,
+  action, onConfirm, onCancel, hideAllOption = false,
 }: {
   action: "save" | "delete";
   onConfirm: (scope: "single" | "following" | "all") => void;
   onCancel: () => void;
+  // Oculta "all recurring events" — p. ej. al arrastrar/reprogramar una
+  // instancia, donde aplicar el cambio a toda la serie no tiene sentido.
+  hideAllOption?: boolean;
 }) {
   const verb = action === "save" ? "Save changes" : "Delete";
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
         <h3 className="font-medium text-gray-800">This is a recurring event</h3>
-        <p className="text-sm text-gray-500">Choose whether this applies to just this occurrence, this and future ones, or all recurring events.</p>
+        <p className="text-sm text-gray-500">
+          {hideAllOption
+            ? "Choose whether this applies to just this occurrence or this and future ones."
+            : "Choose whether this applies to just this occurrence, this and future ones, or all recurring events."}
+        </p>
         <div className="space-y-2">
           <button onClick={() => onConfirm("single")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
             {verb} — this event only
@@ -1700,9 +1691,11 @@ function RecurrenceScopeModal({
           <button onClick={() => onConfirm("following")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
             {verb} — this and following events
           </button>
-          <button onClick={() => onConfirm("all")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
-            {verb} — all recurring events
-          </button>
+          {!hideAllOption && (
+            <button onClick={() => onConfirm("all")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
+              {verb} — all recurring events
+            </button>
+          )}
         </div>
         <button onClick={onCancel} className="w-full py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 rounded-full border border-gray-200">
           Keep
@@ -1789,6 +1782,11 @@ function AssignModal({ event, onClose, onSaved, onOpenSchedule, availabilityRefr
   const [preferredId, setPreferredId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Ids de los cleaners ya asignados al evento cuando se abrió el modal —
+  // para el badge "current" en el picker. Antes se derivaba de
+  // event.attendees (emails de GCal); ahora que el evento trae
+  // assignedCleaners (nombres), se usa el id que devuelve currentAttendees.
+  const [initialAttendeeIds, setInitialAttendeeIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Fix 1 — capacity state from settings
@@ -1875,6 +1873,7 @@ function AssignModal({ event, onClose, onSaved, onOpenSchedule, availabilityRefr
             setAvailable(prev => [...missingFromAvailable, ...prev]);
           }
           setSelectedIds(currentAttendees.map(a => a.id));
+          setInitialAttendeeIds(new Set(currentAttendees.map(a => a.id)));
         }
 
         if (staffRes.keepStablePair && pairs.length > 0 && !userChangedTab.current) {
@@ -1945,14 +1944,6 @@ function AssignModal({ event, onClose, onSaved, onOpenSchedule, availabilityRefr
     setTab("build");
   }
 
-  // Set of current attendee emails for badge detection in SlotPicker.
-  // Built from event.attendees (GCal) — used to mark injected employees
-  // that are already assigned to this event.
-  const EXCLUDED_EMAILS = new Set(["joaquin.labtinos@gmail.com"]);
-  const currentAttendeeEmails = new Set(
-    (event.attendees ?? []).map((e: string) => e.toLowerCase()).filter(e => !EXCLUDED_EMAILS.has(e))
-  );
-
   function EmployeePicker() {
     return (
       <div>
@@ -1976,7 +1967,7 @@ function AssignModal({ event, onClose, onSaved, onOpenSchedule, availabilityRefr
           ) : available.map(emp => {
             const isSel = selectedIds.includes(emp.id);
             const isPref = emp.id === preferredId;
-            const isCurrentAttendee = currentAttendeeEmails.has(emp.email?.toLowerCase() ?? "");
+            const isCurrentAttendee = initialAttendeeIds.has(emp.id);
             const hasScheduleConflict = (emp as any).outsideWorkHours === true;
             const hasBusyConflict = (emp as any).busy === true;
             return (
@@ -2148,7 +2139,7 @@ function RescheduleModal({ event, newStartIso, newEndIso, onConfirm, onCancel, o
   // Existing CA3: team conflict check
   const [conflicts, setConflicts] = useState<ConflictResult[]>([]);
   const [checking, setChecking] = useState(true);
-  const hasAttendees = event.attendees && event.attendees.length > 0;
+  const hasAttendees = event.assignedCleaners && event.assignedCleaners.length > 0;
 
   useEffect(() => {
     if (!event.id || !hasAttendees) { setChecking(false); return; }
@@ -2815,7 +2806,7 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
   }
 
   function requestDelete() {
-    if (event.recurringEventId) setScopeChoiceForDelete(true);
+    if (event.seriesId) setScopeChoiceForDelete(true);
     else setConfirmDelete(true);
   }
 
@@ -2912,10 +2903,10 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
               <span>{event.location}</span>
             </div>
           )}
-          {event.attendees.length > 0 && (
+          {event.assignedCleaners.length > 0 && (
             <div className="flex items-start gap-3">
               <Users size={15} className="mt-0.5 text-gray-400 flex-shrink-0" />
-              <span className="text-xs">{event.attendees.slice(0, 4).join(", ")}{event.attendees.length > 4 ? ` +${event.attendees.length - 4} more` : ""}</span>
+              <span className="text-xs">{event.assignedCleaners.slice(0, 4).join(", ")}{event.assignedCleaners.length > 4 ? ` +${event.assignedCleaners.length - 4} more` : ""}</span>
             </div>
           )}
           {stripClientIdLine(htmlToPlainText(event.description)) && (
@@ -4123,7 +4114,6 @@ export default function AdminCalendarPage() {
   }, [focusMode]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamHeaderRefreshKey, setTeamHeaderRefreshKey] = useState(0);
 
@@ -4478,20 +4468,6 @@ export default function AdminCalendarPage() {
     }
   }
 
-  async function handleForceResync() {
-    setSyncing(true); setError(null);
-    try {
-      const refDate = effectiveView === "day" ? dayAnchor : anchor;
-      const base = effectiveView === "month" ? refDate : startOfMonth(refDate);
-      await apiForceResync(base.getFullYear(), base.getMonth() + 1);
-      await load();
-    } catch (e: any) {
-      setError(`Re-sync failed: ${e.message}`);
-    } finally {
-      setSyncing(false);
-    }
-  }
-
   function handleEventSaved(saved: CalEvent, scope?: "single" | "following" | "all") {
     const editedId = editingEvent?.id;
     if (scope === "following" || scope === "all") {
@@ -4553,7 +4529,7 @@ export default function AdminCalendarPage() {
     // LAB-233: dragging an occurrence of a recurring series — ask whether the
     // new time applies to just this event or the whole series before touching
     // the network. Re-entered with the chosen scope once the modal confirms.
-    if (pendingReschedule.event.recurringEventId && !rescheduleScopeChoice) {
+    if (pendingReschedule.event.seriesId && !rescheduleScopeChoice) {
       setRescheduleScopeChoice(true);
       return;
     }
@@ -4590,18 +4566,7 @@ export default function AdminCalendarPage() {
           <AdminNavbar
             title="Calendar"
             onRefresh={load}
-            refreshing={loading || syncing}
-            rightSlot={
-              <button
-                onClick={handleForceResync}
-                disabled={syncing || loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full disabled:opacity-40 transition-colors"
-                title="Force full re-sync from Google Calendar"
-              >
-                <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
-                {syncing ? "Syncing…" : "Force sync"}
-              </button>
-            }
+            refreshing={loading}
           />
         )}
 
@@ -4832,13 +4797,10 @@ export default function AdminCalendarPage() {
             onClose={() => setShowAutoAssign(false)}
             onApplied={async () => {
               setTeamHeaderRefreshKey((k) => k + 1);
-              // Antes: handleForceResync() recargaba el mes visible ±1 SIEMPRE,
-              // sin importar que el auto-assign solo tocó `autoAssignWeekStart`.
-              const weekEnd = DateTime.fromISO(autoAssignWeekStart).plus({ days: 6 }).toISODate()!;
-              setSyncing(true);
-              try { await apiForceResyncRange(autoAssignWeekStart, weekEnd); await load(); }
-              catch (e: any) { setError(`Re-sync failed: ${e.message}`); }
-              finally { setSyncing(false); }
+              // Standalone: el auto-assign ya persiste en Supabase, no hay
+              // nada externo que re-sincronizar — solo recargar.
+              try { await load(); }
+              catch (e: any) { setError(`Reload failed: ${e.message}`); }
             }}
           />
         )
@@ -4871,6 +4833,7 @@ export default function AdminCalendarPage() {
         rescheduleScopeChoice && (
           <RecurrenceScopeModal
             action="save"
+            hideAllOption
             onConfirm={(scope) => confirmReschedule(scope)}
             onCancel={() => { setRescheduleScopeChoice(false); setPendingReschedule(null); }}
           />
