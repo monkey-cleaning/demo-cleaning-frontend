@@ -5,7 +5,7 @@ import PlaceholderImage from '../../components/PlaceholderImage';
 
 const STORAGE_KEY = 'demoCleaningFormData';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
-const WHATSAPP_NUMBER = '16729745232';
+const WHATSAPP_NUMBER = '16045550142';
 const WHATSAPP_MESSAGE =
   "Hi! I'm interested in booking a cleaning service with Demo Cleaning Co.";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
