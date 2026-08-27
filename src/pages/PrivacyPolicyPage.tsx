@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
         {/* Introduction */}
         <section className="mb-8">
           <p className="text-lg text-gray-700 leading-relaxed">
-            Monkey Cleaning ("we," "our," "us") is committed to protecting your personal information. 
+            Demo Cleaning Co. ("we," "our," "us") is committed to protecting your personal information. 
             This Privacy Policy explains how we collect, use, store, and protect data in compliance 
             with the Personal Information Protection Act (PIPA) of British Columbia.
           </p>
@@ -99,7 +99,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Cookies & Tracking</h2>
             <p className="text-gray-700">
-              Home - Monkey Cleaning uses cookies to enhance browsing and analyze website performance.
+              Home - Demo Cleaning Co. uses cookies to enhance browsing and analyze website performance.
               You may disable cookies in your browser settings.
             </p>
           </section>
@@ -135,7 +135,7 @@ export default function PrivacyPolicyPage() {
             <p className="text-gray-700 mt-4">
               To submit a request, email:
               <br />
-              <span className="font-medium">📧 contact@monkeycleaning.com</span>
+              <span className="font-medium">📧 joaquin.labtinos@gmail.com</span>
             </p>
           </section>
 
@@ -171,7 +171,7 @@ export default function PrivacyPolicyPage() {
           <p className="text-gray-700">
             If you have any questions about this Privacy Policy, please contact us at:
             <br />
-            <span className="font-medium">contact@monkeycleaning.com</span>
+            <span className="font-medium">joaquin.labtinos@gmail.com</span>
           </p>
         </div>
       </div>

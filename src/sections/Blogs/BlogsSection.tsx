@@ -127,7 +127,7 @@ export default function BlogsSection() {
               w-[290px] md:w-auto
               text-center md:text-left
             ">
-              Sparkle & Shine: The Monkey Cleaning Guide{" "}
+              Sparkle & Shine: The Demo Cleaning Co. Guide{" "}
             </h2>
           </div>
 

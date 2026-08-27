@@ -1948,7 +1948,7 @@ function AssignModal({ event, onClose, onSaved, onOpenSchedule, availabilityRefr
   // Set of current attendee emails for badge detection in SlotPicker.
   // Built from event.attendees (GCal) — used to mark injected employees
   // that are already assigned to this event.
-  const EXCLUDED_EMAILS = new Set(["contact@monkeycleaning.com"]);
+  const EXCLUDED_EMAILS = new Set(["joaquin.labtinos@gmail.com"]);
   const currentAttendeeEmails = new Set(
     (event.attendees ?? []).map((e: string) => e.toLowerCase()).filter(e => !EXCLUDED_EMAILS.has(e))
   );

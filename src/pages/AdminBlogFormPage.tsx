@@ -451,7 +451,7 @@ export default function AdminBlogFormPage() {
                   setAuthor(e.target.value);
                   if (errors.author) setErrors(prev => ({ ...prev, author: '' }));
                 }}
-                placeholder="Monkey Cleaning Team"
+                placeholder="Demo Cleaning Co. Team"
               />
               {errors.author && (
                 <p className="text-red-500 text-xs mt-1">{errors.author}</p>

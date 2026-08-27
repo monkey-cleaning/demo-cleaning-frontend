@@ -71,7 +71,7 @@ interface AdminNavbarProps {
 
 export default function AdminNavbar({
   title = 'Admin Dashboard',
-  sectionLabel = 'Monkey Cleaning',
+  sectionLabel = 'Demo Cleaning Co.',
   onRefresh,
   refreshing = false,
   rightSlot,

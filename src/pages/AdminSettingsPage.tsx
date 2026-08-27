@@ -1002,7 +1002,7 @@ function EmailInput({
       type="email"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="ops@monkeycleaning.com"
+      placeholder="joaquin.labtinos@gmail.com"
       className="w-64 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] transition-all bg-white"
     />
   );

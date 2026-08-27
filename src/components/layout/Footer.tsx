@@ -66,7 +66,7 @@ export default function Footer() {
               <div className="mb-[49px]">
                 <img
                   src={logoDesktop}
-                  alt="Monkey Cleaning"
+                  alt="Demo Cleaning Co."
                   className="w-[150px] h-[63.59px]"
                 />
               </div>
@@ -95,7 +95,7 @@ export default function Footer() {
                   <a href="https://wa.me/16729745232" target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={whatsappIcon} alt="Whatsapp" className="w-[28px] h-[28px]" />
                   </a>
-                  <a href="mailto:contact@monkeycleaning.com" className="w-[28px] h-[28px] hover:opacity-80">
+                  <a href="mailto:joaquin.labtinos@gmail.com" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={mIcon} alt="Mail" className="w-[28px] h-[28px]" />
                   </a>
                   <a href="https://www.instagram.com/monkey.cleaning/#" className="w-[28px] h-[28px] hover:opacity-80">
@@ -149,7 +149,7 @@ export default function Footer() {
 
           <div className="mt-[40px] flex items-center justify-between">
             <p className="font-['Montserrat'] font-medium text-[18px] leading-[30px] max-w-[608px]">
-              Copyright © {year} Monkey Cleaning | Powered by Monkey Cleaning
+              Copyright © {year} Demo Cleaning Co. | Powered by Demo Cleaning Co.
             </p>
             <div className="flex gap-[8px] font-['Montserrat'] font-medium text-[18px] leading-[30px]">
               <a href="/privacy" className="hover:underline">
@@ -177,7 +177,7 @@ export default function Footer() {
               <div className="mb-[36px]">
                 <img
                   src={logoDesktop}
-                  alt="Monkey Cleaning"
+                  alt="Demo Cleaning Co."
                   className="w-[120px] h-auto"
                 />
               </div>
@@ -206,7 +206,7 @@ export default function Footer() {
                   <a href="https://wa.me/16729745232" target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={whatsappIcon} alt="Whatsapp" className="w-[24px] h-[24px]" />
                   </a>
-                  <a href="mailto:contact@monkeycleaning.com" className="w-[24px] h-[24px] hover:opacity-80">
+                  <a href="mailto:joaquin.labtinos@gmail.com" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={mIcon} alt="Mail" className="w-[24px] h-[24px]" />
                   </a>
                   <a href="https://www.instagram.com/monkey.cleaning/#" className="w-[24px] h-[24px] hover:opacity-80">
@@ -260,7 +260,7 @@ export default function Footer() {
 
           <div className="mt-[36px] flex flex-wrap items-center justify-between gap-y-2">
             <p className="font-['Montserrat'] font-medium text-[14px] leading-[28px]">
-              Copyright © {year} Monkey Cleaning | Powered by Monkey Cleaning
+              Copyright © {year} Demo Cleaning Co. | Powered by Demo Cleaning Co.
             </p>
             <div className="flex gap-[8px] font-['Montserrat'] font-medium text-[14px] leading-[28px] items-center">
               <a href="/privacy" className="hover:underline">
@@ -283,7 +283,7 @@ export default function Footer() {
         <div className="mb-[30px]">
           <img
             src={logoDesktop}
-            alt="Monkey Cleaning"
+            alt="Demo Cleaning Co."
             className="w-[93.26px] h-[39.54px]"
           />
         </div>
@@ -342,7 +342,7 @@ export default function Footer() {
             <a href="https://wa.me/16729745232" target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={whatsappIcon} alt="Whatsapp" className="w-[32.26px] h-[32.26px]" />
             </a>
-            <a href="mailto:contact@monkeycleaning.com" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+            <a href="mailto:joaquin.labtinos@gmail.com" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={mIcon} alt="Mail" className="w-[32.26px] h-[32.26px]" />
             </a>
             <a href="https://www.instagram.com/monkey.cleaning/#" className="w-[32.26px] h-[32.26px] hover:opacity-80">
@@ -365,7 +365,7 @@ export default function Footer() {
         </div>
 
         <p className="font-['Montserrat'] font-medium text-[16.13px] leading-[34.56px]">
-          Copyright © {year} Monkey Cleaning | Powered by Monkey Cleaning
+          Copyright © {year} Demo Cleaning Co. | Powered by Demo Cleaning Co.
         </p>
       </div>
     </footer>

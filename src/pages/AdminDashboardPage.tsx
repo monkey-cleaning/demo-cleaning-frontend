@@ -5,6 +5,10 @@ import { format, subMonths, startOfMonth, endOfMonth, subYears } from 'date-fns'
 import AdminNavbar from '../components/admin/AdminNavbar';
 import ConflictsAlertSection from '../components/admin/ConflictsAlertSection';
 
+function clientDisplayName(c: { name?: string; first_name?: string; last_name?: string }) {
+  return c.name ?? ([c.first_name, c.last_name].filter(Boolean).join(' ') || '(no name)');
+}
+
 // ── Period filter ─────────────────────────────────────────────────────────────
 
 type PeriodPreset = '6m' | '1y' | 'custom';
@@ -499,7 +503,7 @@ export default function AdminDashboardPage() {
                     <li key={inv.id} className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-navy truncate">
-                          {inv.leads?.full_name ?? inv.quickbooks_customer_name ?? 'Unknown'}
+                          {inv.clients ? clientDisplayName(inv.clients) : (inv.quickbooks_customer_name ?? 'Unknown')}
                         </p>
                         <p className="text-xs text-gray-400">
                           Due {inv.due_date ? format(new Date(inv.due_date), 'MMM d') : '—'}
@@ -613,7 +617,7 @@ export default function AdminDashboardPage() {
                     {recentInvoices.map(inv => (
                       <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-6 py-3.5 font-medium text-navy truncate max-w-[160px]">
-                          {inv.leads?.full_name ?? inv.quickbooks_customer_name ?? 'Unknown'}
+                          {inv.clients ? clientDisplayName(inv.clients) : (inv.quickbooks_customer_name ?? 'Unknown')}
                         </td>
                         <td className="px-6 py-3.5 text-gray-500 hidden md:table-cell">{inv.doc_number ?? '—'}</td>
                         <td className="px-6 py-3.5 text-gray-500 hidden md:table-cell">
@@ -632,7 +636,7 @@ export default function AdminDashboardPage() {
                     <li key={inv.id} className="px-4 py-3.5 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-navy truncate">
-                          {inv.leads?.full_name ?? inv.quickbooks_customer_name ?? 'Unknown'}
+                          {inv.clients ? clientDisplayName(inv.clients) : (inv.quickbooks_customer_name ?? 'Unknown')}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {inv.due_date ? `Due ${format(new Date(inv.due_date), 'MMM d')}` : '—'}

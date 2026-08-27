@@ -127,7 +127,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       ============================================================ */}
       <div className={`${variant === 'transparent' ? 'pt-10' : 'py-4'} hidden lg:flex items-center justify-between max-w-6xl mx-auto px-1`}>
         <NavLink to="/" end>
-          <img src={logoDesktop} alt="Monkey Cleaning" className="w-[142px] h-[60px]" />
+          <img src={logoDesktop} alt="Demo Cleaning Co." className="w-[142px] h-[60px]" />
         </NavLink>
 
         <nav className={`flex items-center gap-10 rounded-[24px] px-[18px] py-[20px] relative ${navPillBackground}`}>
@@ -190,7 +190,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       ============================================================ */}
       <div className={`${variant === 'transparent' ? 'pt-8' : 'py-3'} hidden md:flex lg:hidden items-center justify-between w-full px-[4%]`}>
         <NavLink to="/" end>
-          <img src={logoDesktop} alt="Monkey Cleaning" className="w-[110px] h-auto" />
+          <img src={logoDesktop} alt="Demo Cleaning Co." className="w-[110px] h-auto" />
         </NavLink>
 
         <nav className={`flex items-center gap-5 rounded-[20px] px-[14px] py-[14px] relative ${navPillBackground}`}>
@@ -252,7 +252,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
         <div className="flex items-center justify-between">
           <div className='ml-5'>
             <NavLink to="/" end>
-              <img src={logoMobile} alt="Monkey Cleaning" className="w-[60px] h-[25px]" />
+              <img src={logoMobile} alt="Demo Cleaning Co." className="w-[60px] h-[25px]" />
             </NavLink>
           </div>
           <div className='mr-5'>

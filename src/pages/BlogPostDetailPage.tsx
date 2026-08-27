@@ -130,7 +130,7 @@ export default function BlogPostDetailPage() {
   const { post, sections, related } = data;
   const introText = sections.length > 0 && sections[0].body ? sections[0].body : post.excerpt;
 
-  const pageTitle = (post.seoTitle || post.title) + " | Monkey Cleaning";
+  const pageTitle = (post.seoTitle || post.title) + " | Demo Cleaning Co.";
   const pageDescription = post.seoDescription || post.excerpt.slice(0, 155);
   const baseOrigin = typeof window !== "undefined" ? window.location.origin : "https://landing-monkey-frontend.onrender.com";
   const url = `${baseOrigin}/blog/${post.slug}`;
@@ -159,7 +159,7 @@ export default function BlogPostDetailPage() {
             headline: post.seoTitle || post.title,
             description: pageDescription,
             image: ogImage ? [ogImage] : undefined,
-            author: { "@type": "Organization", name: post.author || "Monkey Cleaning" },
+            author: { "@type": "Organization", name: post.author || "Demo Cleaning Co." },
             datePublished: post.date,
             mainEntityOfPage: { "@type": "WebPage", "@id": url },
           })}

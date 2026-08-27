@@ -7,7 +7,7 @@ const STORAGE_KEY = 'monkeyCleaningFormData';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
 const WHATSAPP_NUMBER = '16729745232';
 const WHATSAPP_MESSAGE =
-  "Hi! I'm interested in booking a cleaning service with Monkey Cleaning.";
+  "Hi! I'm interested in booking a cleaning service with Demo Cleaning Co..";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
   WHATSAPP_MESSAGE
 )}`;
@@ -849,7 +849,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
                 <div>
                   {/* Logo */}
                   <div className="mb-8 justify-center items-center mx-auto">
-                    <img src={logoDesktop} alt="Monkey Cleaning" className="h-12 mx-auto" />
+                    <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 mx-auto" />
                   </div>
 
                   {/* Steps - All completed */}
@@ -912,7 +912,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
         <div className="md:hidden max-w-[363px] mx-auto mt-[-70px]">
           <div className="bg-[#F1F0FB] rounded-[28px] p-6">
             <div className="text-center mb-10">
-              <img src={logoDesktop} alt="Monkey Cleaning" className="h-12 w-auto mx-auto" />
+              <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 w-auto mx-auto" />
             </div>
             <div className="bg-white rounded-[20px] p-6 border border-green-200">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -969,7 +969,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
                 {/* Logo */}
                 {/* CA2: shorter mb at tablet so logo doesn't push steps below fold */}
                 <div className="mb-6 lg:mb-[100px] justify-center items-center mx-auto">
-                  <img src={logoDesktop} alt="Monkey Cleaning" className="h-12 mx-auto" />
+                  <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 mx-auto" />
                 </div>
 
                 {/* Steps */}
@@ -1116,7 +1116,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
         <div className="bg-[#F1F0FB] rounded-[28px] p-3">
           {/* Logo */}
           <div className="text-center mb-10">
-            <img src={logoDesktop} alt="Monkey Cleaning" className="h-12 w-auto mx-auto" />
+            <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 w-auto mx-auto" />
           </div>
 
           {/* Form Type Toggle */}

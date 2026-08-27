@@ -119,7 +119,7 @@ export default function HeroSection() {
         >
           <div className="bg-black/50 text-white p-4 rounded-lg text-center">
             <p className="text-lg mb-2">Video no disponible</p>
-            <p className="text-sm opacity-75">Monkey Cleaning</p>
+            <p className="text-sm opacity-75">Demo Cleaning Co.</p>
           </div>
         </div>
       )}
