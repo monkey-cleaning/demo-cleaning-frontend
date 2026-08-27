@@ -68,7 +68,9 @@ async function apiFetchSuggestions(weekStart: string): Promise<SuggestionsRespon
   const promise = (async () => {
     const res = await fetch(
       `${API_BASE}/api/admin/staff/team-assignments/auto-suggestions?weekStart=${weekStart}`,
-      { headers: authHeaders() },
+      // cache: "no-store" — nunca servir una respuesta vieja del disk cache
+      // (un 410 stub cacheado del código pre-reimplementación quedaba pegado).
+      { headers: authHeaders(), cache: "no-store" },
     );
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
@@ -87,7 +89,7 @@ async function apiFetchAvailableStaff(date: string, eventIds: string[]): Promise
   const eventIdParam = eventIds.join(',');
   const res = await fetch(
     `${API_BASE}/api/admin/staff/available?date=${date}&eventIds=${encodeURIComponent(eventIdParam)}`,
-    { headers: authHeaders() },
+    { headers: authHeaders(), cache: "no-store" },
   );
   const data = await res.json();
   if (!res.ok) {
