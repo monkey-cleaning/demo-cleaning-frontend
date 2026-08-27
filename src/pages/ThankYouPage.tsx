@@ -7,7 +7,7 @@ export default function ThankYouPage() {
       <SEO
         title="Thank You"
         description="Thank you for requesting a cleaning quote. Our team will contact you shortly."
-        canonical="https://www.monkeycleaning.com/gracias"
+        canonical="https://demo-cleaning-frontend.onrender.com/thank-you"
       />
       <section className="max-w-xl mx-auto px-4 py-24 text-center">
         <h2 className="text-3xl font-semibold text-navy mb-4">

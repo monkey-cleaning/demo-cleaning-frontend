@@ -3,7 +3,7 @@ import { ChevronRight, ChevronLeft } from 'lucide-react';
 import whatsappIcon from '../../assets/whatsapp.png';
 import PlaceholderImage from '../../components/PlaceholderImage';
 
-const STORAGE_KEY = 'monkeyCleaningFormData';
+const STORAGE_KEY = 'demoCleaningFormData';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
 const WHATSAPP_NUMBER = '16729745232';
 const WHATSAPP_MESSAGE =
