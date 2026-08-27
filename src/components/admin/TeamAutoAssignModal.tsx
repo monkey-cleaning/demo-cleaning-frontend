@@ -290,7 +290,7 @@ function DayTeamCell({
 
   if (!suggestion) {
     return (
-      <div className="flex-1 min-w-[140px] rounded-lg border border-dashed border-gray-200 p-2">
+      <div className="h-full rounded-lg border border-dashed border-gray-200 p-2">
         <span className="text-[11px] text-gray-300 italic">No events</span>
       </div>
     );
@@ -309,7 +309,7 @@ function DayTeamCell({
 
   return (
     <div
-      className="flex-1 min-w-[140px] rounded-lg p-2 space-y-1.5"
+      className="h-full rounded-lg p-2 space-y-1.5"
       style={{ borderLeft: `3px solid ${teamColor}`, background: `${teamColor}0d` }}
     >
       {suggestion.needsManual && (
@@ -509,67 +509,76 @@ export default function TeamAutoAssignModal({ weekStart, onClose, onApplied }: T
           )}
 
           {!loading && !error && (
-            <div className="space-y-4">
-              {/* Selección de días a modificar */}
-              <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
-                <div className="flex gap-2 overflow-x-auto flex-1">
-                  {dates.map((date) => (
-                    <label
-                      key={date}
-                      className="flex flex-col items-center gap-1 cursor-pointer select-none"
-                      style={{ minWidth: 150 }}
-                    >
-                      <span className="text-[10px] text-gray-500 font-medium">{dayLabel(date)}</span>
-                      <input
-                        type="checkbox"
-                        checked={selectedDays.has(date)}
-                        onChange={() => toggleDay(date)}
-                        className="h-3.5 w-3.5 accent-gray-900"
-                      />
-                    </label>
+            <div className="space-y-3">
+              <div className="flex justify-end gap-3 text-[11px] font-medium text-gray-400">
+                <button onClick={() => setAllDays(true)} className="hover:text-gray-700">Select all days</button>
+                <button onClick={() => setAllDays(false)} className="hover:text-gray-700">Clear</button>
+              </div>
+
+              {/* Grilla con scroll horizontal ÚNICO — header y todas las filas
+                  comparten el mismo grid-template, así las columnas alinean. */}
+              <div className="overflow-x-auto">
+                <div className="min-w-full">
+                  {/* Header de días (sticky para que quede visible al scrollear) */}
+                  <div
+                    className="grid gap-2 pb-2 mb-2 border-b border-gray-100 sticky top-0 bg-white z-10"
+                    style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(160px, 1fr))` }}
+                  >
+                    {dates.map((date) => (
+                      <label
+                        key={date}
+                        className="flex flex-col items-center gap-1 cursor-pointer select-none"
+                      >
+                        <span className="text-[10px] text-gray-500 font-medium">{dayLabel(date)}</span>
+                        <input
+                          type="checkbox"
+                          checked={selectedDays.has(date)}
+                          onChange={() => toggleDay(date)}
+                          className="h-3.5 w-3.5 accent-gray-900"
+                        />
+                      </label>
+                    ))}
+                  </div>
+
+                  {teams.map((team) => (
+                    <div key={team.id} className="mb-3">
+                      <div
+                        className="text-xs font-semibold uppercase tracking-widest mb-1.5"
+                        style={{ color: team.color }}
+                      >
+                        {team.emojis?.[0] ?? "⚫"} {team.label}
+                      </div>
+                      <div
+                        className="grid gap-2 items-stretch"
+                        style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(160px, 1fr))` }}
+                      >
+                        {dates.map((date) => {
+                          const key = cellKey(date, team.id);
+                          const suggestion = suggestionsByCell.get(key) ?? null;
+                          const kept = editedByCell.get(key) ?? [];
+                          const dayActive = selectedDays.has(date);
+                          return (
+                            <div
+                              key={key}
+                              className={`transition-opacity ${dayActive ? "" : "opacity-40 pointer-events-none"}`}
+                            >
+                              <DayTeamCell
+                                suggestion={suggestion}
+                                teamColor={team.color}
+                                kept={kept}
+                                onAdd={(emp) => handleAdd(date, team.id, emp)}
+                                onRemove={(employeeId) => handleRemove(date, team.id, employeeId)}
+                                assignedElsewhereToday={assignedElsewhereToday(date, team.id)}
+                                allEmployees={allEmployees}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <div className="flex gap-2 text-[10px] font-medium text-gray-400 pl-2">
-                  <button onClick={() => setAllDays(true)} className="hover:text-gray-700">All</button>
-                  <button onClick={() => setAllDays(false)} className="hover:text-gray-700">None</button>
-                </div>
               </div>
-              {teams.map((team) => (
-                <div key={team.id}>
-                  <div
-                    className="text-xs font-semibold uppercase tracking-widest mb-1.5"
-                    style={{ color: team.color }}
-                  >
-                    {team.emojis?.[0] ?? "⚫"} {team.label}
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {dates.map((date) => {
-                      const key = cellKey(date, team.id);
-                      const suggestion = suggestionsByCell.get(key) ?? null;
-                      const kept = editedByCell.get(key) ?? [];
-                      const dayActive = selectedDays.has(date);
-                      return (
-                        <div
-                          key={key}
-                          className={`flex flex-col gap-1 transition-opacity ${dayActive ? "" : "opacity-40 pointer-events-none"}`}
-                          style={{ minWidth: 150 }}
-                        >
-                          <span className="text-[10px] text-gray-400 text-center">{dayLabel(date)}</span>
-                          <DayTeamCell
-                            suggestion={suggestion}
-                            teamColor={team.color}
-                            kept={kept}
-                            onAdd={(emp) => handleAdd(date, team.id, emp)}
-                            onRemove={(employeeId) => handleRemove(date, team.id, employeeId)}
-                            assignedElsewhereToday={assignedElsewhereToday(date, team.id)}
-                            allEmployees={allEmployees}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
             </div>
           )}
         </div>
