@@ -8,7 +8,7 @@ export default function ResidentialPage() {
   return (
     <div className="min-h-screen max">
       <HeroSection />
-      <ServicesSection initialActive="residential" />
+      <ServicesSection />
       <FormSection />
       <Footer />
     </div>

@@ -8,7 +8,7 @@ export default function OfficesPage() {
   return (
     <div className="min-h-screen max">
       <HeroSection />
-      <ServicesSection initialActive="offices" />
+      <ServicesSection />
       <FormSection />
       <Footer />
     </div>

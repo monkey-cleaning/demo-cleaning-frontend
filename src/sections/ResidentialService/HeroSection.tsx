@@ -1,6 +1,5 @@
 import Navbar from '../../components/layout/Navbar';
-import heroDesktop from '../../assets/residential-img.jpg';
-import heroMobile from '../../assets/residential-img.jpg';
+import PlaceholderImage from '../../components/PlaceholderImage';
 import rightIcon from '../../assets/rightIcon.png';
 
 export default function HeroSection() {
@@ -11,20 +10,16 @@ export default function HeroSection() {
 
   return (
     <section className="relative w-full">
-      <picture>
-        <source srcSet={heroDesktop} media="(min-width: 768px)" />
-        <img
-          src={heroMobile}
-          alt="Cleaning team working in a bright living room"
-          className="
-            w-full object-cover
-            h-[350px]
-            md:h-[500px]
-            lg:h-[700px]
-            xl:h-[800px]
-          "
-        />
-      </picture>
+      <PlaceholderImage
+        className="
+          w-full
+          h-[350px]
+          md:h-[500px]
+          lg:h-[700px]
+          xl:h-[800px]
+        "
+        label="Residential Cleaning"
+      />
 
       <div className="fixed top-0 left-0 right-0 z-[100]">
         <Navbar variant="transparent" />

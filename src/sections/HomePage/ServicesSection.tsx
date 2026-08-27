@@ -1,6 +1,5 @@
-import serviceDesktop from '../../assets/service-desktop.png';
-import serviceMobile from '../../assets/service-mobile.png';
 import { useNavigate } from 'react-router-dom';
+import PlaceholderImage from '../../components/PlaceholderImage';
 
 export default function ServicesSection() {
   const navigate = useNavigate();
@@ -87,12 +86,8 @@ export default function ServicesSection() {
 
           {/* Right Image — scales proportionally within the column */}
           <div className="flex justify-end">
-            <img
-              src={serviceDesktop}
-              alt="Professional cleaning team"
-              loading="lazy"
-              className="w-full max-w-[504px] rounded-[18px] object-cover"
-              style={{ height: 'clamp(300px, 35vw, 480px)' }}
+            <PlaceholderImage
+              className="w-full max-w-[504px] h-[clamp(300px,35vw,480px)] rounded-[18px]"
             />
           </div>
         </div>
@@ -132,10 +127,7 @@ export default function ServicesSection() {
             </div>
 
             <div className="flex-shrink-0">
-              <img
-                src={serviceMobile}
-                alt="Professional cleaning team"
-                loading="lazy"
+              <PlaceholderImage
                 className="w-[136px] h-[129px] rounded-[5.57px] object-cover"
               />
             </div>

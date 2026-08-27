@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PlaceholderImage from '../../components/PlaceholderImage';
 
 const services = [
   {
@@ -120,10 +121,7 @@ export default function GeneralServicesSection() {
               }}
               onClick={() => handleCardClick(service.linkTo, index)}
             >
-              <img
-                src={service.image}
-                alt={service.title}
-                loading="lazy"
+              <PlaceholderImage
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
@@ -195,7 +193,7 @@ export default function GeneralServicesSection() {
                   borderRadius: isCenter ? '9.25px' : '7.24px'
                 }}
               >
-                <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
+                <PlaceholderImage className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className={`absolute bottom-0 left-0 right-0 text-white ${isCenter ? 'p-4' : 'p-3'}`}>
                   <h3 className={`font-bold mb-1 ${isCenter ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: 'Montserrat, sans-serif' }}>

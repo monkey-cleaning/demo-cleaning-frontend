@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import logoDesktop from '../../assets/logo-footer.png';
+import PlaceholderImage from '../PlaceholderImage';
 import instagramIcon from '../../assets/instagram.png';
 import facebookIcon from '../../assets/facebook.png';
 import whatsappIcon from '../../assets/whatsappFooter.png';
 import mIcon from '../../assets/m.png';
 import iconoInput from '../../assets/iconoInput.png';
+
+// Placeholder ficticio (rango NANP reservado 555-01XX) — el real era de
+// Monkey Cleaning. LAB, ago 2026.
+const WHATSAPP_URL = 'https://wa.me/16045550142';
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -64,11 +68,7 @@ export default function Footer() {
             {/* Columna izquierda */}
             <div>
               <div className="mb-[49px]">
-                <img
-                  src={logoDesktop}
-                  alt="Demo Cleaning Co."
-                  className="w-[150px] h-[63.59px]"
-                />
+                <span className="font-['Montserrat'] font-bold text-white text-2xl">Demo Cleaning Co.</span>
               </div>
 
               <p className="font-['Montserrat'] font-medium text-[18px] leading-[25px] mb-[49px] max-w-[452px]">
@@ -92,16 +92,16 @@ export default function Footer() {
                   Follow Us
                 </p>
                 <div className="flex gap-[20px]">
-                  <a href="https://wa.me/16729745232" target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
+                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={whatsappIcon} alt="Whatsapp" className="w-[28px] h-[28px]" />
                   </a>
                   <a href="mailto:joaquin.labtinos@gmail.com" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={mIcon} alt="Mail" className="w-[28px] h-[28px]" />
                   </a>
-                  <a href="https://www.instagram.com/monkey.cleaning/#" className="w-[28px] h-[28px] hover:opacity-80">
+                  <a href="#" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={instagramIcon} alt="Instagram" className="w-[28px] h-[28px]" />
                   </a>
-                  <a href="https://www.facebook.com/people/Monkey-Cleaning/61555816604539/" className="w-[28px] h-[28px] hover:opacity-80">
+                  <a href="#" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={facebookIcon} alt="Facebook" className="w-[28px] h-[28px]" />
                   </a>
                 </div>
@@ -175,11 +175,7 @@ export default function Footer() {
             {/* Columna izquierda */}
             <div className="flex-1 min-w-0">
               <div className="mb-[36px]">
-                <img
-                  src={logoDesktop}
-                  alt="Demo Cleaning Co."
-                  className="w-[120px] h-auto"
-                />
+                <span className="font-['Montserrat'] font-bold text-white text-lg">Demo Cleaning Co.</span>
               </div>
 
               <p className="font-['Montserrat'] font-medium text-[15px] leading-[22px] mb-[36px]">
@@ -203,16 +199,16 @@ export default function Footer() {
                   Follow Us
                 </p>
                 <div className="flex gap-[16px]">
-                  <a href="https://wa.me/16729745232" target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
+                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={whatsappIcon} alt="Whatsapp" className="w-[24px] h-[24px]" />
                   </a>
                   <a href="mailto:joaquin.labtinos@gmail.com" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={mIcon} alt="Mail" className="w-[24px] h-[24px]" />
                   </a>
-                  <a href="https://www.instagram.com/monkey.cleaning/#" className="w-[24px] h-[24px] hover:opacity-80">
+                  <a href="#" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={instagramIcon} alt="Instagram" className="w-[24px] h-[24px]" />
                   </a>
-                  <a href="https://www.facebook.com/people/Monkey-Cleaning/61555816604539/" className="w-[24px] h-[24px] hover:opacity-80">
+                  <a href="#" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={facebookIcon} alt="Facebook" className="w-[24px] h-[24px]" />
                   </a>
                 </div>
@@ -281,9 +277,7 @@ export default function Footer() {
       ============================================================ */}
       <div className="md:hidden px-[27.65px] py-[40px]">
         <div className="mb-[30px]">
-          <img
-            src={logoDesktop}
-            alt="Demo Cleaning Co."
+          <PlaceholderImage
             className="w-[93.26px] h-[39.54px]"
           />
         </div>
@@ -339,16 +333,16 @@ export default function Footer() {
             Follow Us
           </p>
           <div className="flex gap-[25px]">
-            <a href="https://wa.me/16729745232" target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={whatsappIcon} alt="Whatsapp" className="w-[32.26px] h-[32.26px]" />
             </a>
             <a href="mailto:joaquin.labtinos@gmail.com" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={mIcon} alt="Mail" className="w-[32.26px] h-[32.26px]" />
             </a>
-            <a href="https://www.instagram.com/monkey.cleaning/#" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+            <a href="#" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={instagramIcon} alt="Instagram" className="w-[32.26px] h-[32.26px]" />
             </a>
-            <a href="https://www.facebook.com/people/Monkey-Cleaning/61555816604539/" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+            <a href="#" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={facebookIcon} alt="Facebook" className="w-[32.26px] h-[32.26px]" />
             </a>
           </div>

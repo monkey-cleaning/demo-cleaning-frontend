@@ -3,6 +3,7 @@ import onTimeImage from '../../assets/onTime.jpg';
 import ecoFriendlyImage from '../../assets/ecoFriendly.png';
 import vettedImage from '../../assets/vetted.png';
 import checkIcon from '../../assets/check.png';
+import PlaceholderImage from '../../components/PlaceholderImage';
 
 export default function WhyChooseUsSection() {
   const cards = [
@@ -57,7 +58,7 @@ export default function WhyChooseUsSection() {
               className="relative rounded-[14.69px] overflow-hidden flex-shrink-0"
               style={{ width: '250.5px', height: '323.63px' }}
             >
-              <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
+              <PlaceholderImage className="w-full h-full object-cover" />
               <div
                 className="absolute bottom-0 left-0 right-0 flex flex-col backdrop-blur-sm"
                 style={{ height: '107.82px', padding: '7.35px 14.69px 14.69px 14.69px', gap: '6.53px', background: 'transparent' }}
@@ -92,7 +93,7 @@ export default function WhyChooseUsSection() {
               height: 'clamp(280px, 30vw, 396px)'
             }}
           >
-            <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
+            <PlaceholderImage className="w-full h-full object-cover" />
             <div
               className="absolute bottom-0 left-0 right-0 flex flex-col backdrop-blur-sm"
               style={{ height: '132.08px', padding: '9px 18px 18px 18px', gap: '8px', background: 'transparent' }}

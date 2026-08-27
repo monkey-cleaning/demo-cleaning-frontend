@@ -1,25 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-
-// All (overview)
-import residentialDesktop from "../../assets/residential-desktop.jpg";
-import commercialDesktop from "../../assets/commercial-desktop.jpg";
-import officesDesktop from "../../assets/office-desktop.jpg";
+import PlaceholderImage from "../PlaceholderImage";
 import UpIcon from "../../assets/upIcon.png";
-
-// Detailed images
-import standardResidential from "../../assets/standard-residential-cleaning.png";
-import deepResidential from "../../assets/deep-residential-cleaning.png";
-import moveResidential from "../../assets/move-residential-cleaning.png";
-
-import standardCommercial from "../../assets/standard-commercial-cleaning.png";
-import deepCommercial from "../../assets/deep-commercial-cleaning.png";
-import moveCommercial from "../../assets/move-commercial-cleaning.png";
-
-import standardOffice from "../../assets/standard-office-cleaning.png";
-import deepOffice from "../../assets/deep-office-cleaning.png";
-import moveOffice from "../../assets/move-office-cleaning.png";
-
-// Check icon for includes
 import checkServices from "../../assets/check-services.png";
 
 type CategoryId = "all" | "residential" | "commercial" | "offices";
@@ -29,18 +10,16 @@ type ServicesSectionProps = {
 };
 
 const CATEGORIES: { id: CategoryId; label: string }[] = [
-  { id: "all",         label: "All" },
+  { id: "all", label: "All" },
   { id: "residential", label: "Residential" },
-  { id: "commercial",  label: "Commercial" },
-  { id: "offices",     label: "Offices" },
+  { id: "commercial", label: "Commercial" },
+  { id: "offices", label: "Offices" },
 ];
 
 type OverviewCard = {
   id: Exclude<CategoryId, "all">;
   title: string;
   description: string;
-  imageDesktop: string;
-  imageMobile: string;
   cta: string;
 };
 
@@ -50,8 +29,6 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Residental Cleaning",
     description:
       "Reliable home cleaning designed around your routine and comfort. Our team ensures every corner shines, from living areas to kitchens, using eco-friendly products that keep your home fresh and safe",
-    imageDesktop: residentialDesktop,
-    imageMobile: residentialDesktop,
     cta: "Book Now",
   },
   {
@@ -59,8 +36,6 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Commercial Cleaning",
     description:
       "Reliable cleaning solutions tailored to your business hours and needs. Our team keeps every space spotless, from floors to high-touch areas ensuring a safe, polished, and welcoming workplace",
-    imageDesktop: commercialDesktop,
-    imageMobile: commercialDesktop,
     cta: "Book Now",
   },
   {
@@ -68,8 +43,6 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Offices Cleaning",
     description:
       "Reliable office cleaning that keeps your workspace organized and fresh. From desks to meeting rooms, our team delivers spotless results using eco-friendly products and attention to every detail",
-    imageDesktop: officesDesktop,
-    imageMobile: officesDesktop,
     cta: "Book Now",
   },
 ];
@@ -78,7 +51,6 @@ type DetailedCard = {
   category: Exclude<CategoryId, "all">;
   title: string;
   description: string;
-  image: string;
   includes: string[];
 };
 
@@ -89,7 +61,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Cleaning",
     description:
       "Routine maintenance for a spotless home — perfect for weekly or bi-weekly schedules.",
-    image: standardResidential,
     includes: [
       "Dusting and vacuuming all rooms",
       "Wiping kitchen surfaces and appliances",
@@ -102,7 +73,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Cleaning",
     description:
       "A thorough top-to-bottom clean ideal for seasonal refreshes or first-time services.",
-    image: deepResidential,
     includes: [
       "Everything from Standard Cleaning",
       "Inside oven, fridge, and cabinets",
@@ -115,7 +85,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Move In / Move Out",
     description:
       "Detailed cleaning for transitions — ensure every room feels ready, fresh, and inviting.",
-    image: moveResidential,
     includes: [
       "All Deep Cleaning tasks",
       "Inside closets, drawers, and storage areas",
@@ -130,7 +99,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Office Cleaning",
     description:
       "Routine maintenance to keep your workspace clean, organized, and ready for the day.",
-    image: standardOffice,
     includes: [
       "Dusting desks, shelves, and office equipment",
       "Vacuuming and mopping floors",
@@ -143,7 +111,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Office Cleaning",
     description:
       "Comprehensive cleaning for a healthier, more refreshing workspace — ideal for quarterly or seasonal service.",
-    image: deepOffice,
     includes: [
       "All Standard Cleaning tasks",
       "Disinfecting keyboards, and shared electronics",
@@ -156,7 +123,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Breakroom & Common Area Care",
     description:
       "Specialized cleaning to prepare your commercial space for reopening or move-in after remodeling.",
-    image: moveOffice,
     includes: [
       "Cleaning sinks, counters, and appliances",
       "Wiping tables and seating areas",
@@ -171,7 +137,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Commercial Cleaning",
     description:
       "Regular upkeep to maintain a professional environment — perfect for offices, retail spaces, and small businesses.",
-    image: standardCommercial,
     includes: [
       "Dusting, vacuuming, and mopping all floors",
       "Trash removal and restroom sanitization",
@@ -184,7 +149,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Commercial Cleaning",
     description:
       "Comprehensive cleaning for businesses needing extra attention — ideal for seasonal refreshes or periodic maintenance.",
-    image: deepCommercial,
     includes: [
       "All Standard Cleaning tasks",
       "Interior windows and glass partitions",
@@ -197,7 +161,6 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Post-Construction / Renovation Cleaning",
     description:
       "Specialized cleaning to prepare your commercial space for reopening or move-in after remodeling.",
-    image: moveCommercial,
     includes: [
       "Removal of dust, paint, and construction debris",
       "Deep cleaning of floors, vents, and fixtures",
@@ -326,23 +289,18 @@ export default function ServicesSection({
         {/* ======= CONTENT ======= */}
         {active === "all" ? (
           // -------- ALL (overview) --------
-          // grid-cols-1 → grid-cols-3 — cards use w-full so they never overflow
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-4 lg:gap-8">
             {OVERVIEW_CARDS.map((card) => (
               <article
                 key={card.title}
                 className="flex flex-col items-start w-full h-full space-y-4"
               >
-                {/* Image — full width of the column, fixed aspect ratio */}
-                <img
-                  src={card.imageDesktop}
-                  alt={card.title}
-                  loading="lazy"
+                <PlaceholderImage
+                  label={card.title}
                   className="
                     w-full
                     h-[193px] md:h-[210px] lg:h-[240px] xl:h-[262px]
                     rounded-[14.55px] md:rounded-[20px] lg:rounded-[30px]
-                    object-cover
                   "
                 />
 
@@ -400,15 +358,12 @@ export default function ServicesSection({
                 key={card.title}
                 className="flex flex-col items-start w-full space-y-3 md:space-y-4"
               >
-                <img
-                  src={card.image}
-                  alt={card.title}
-                  loading="lazy"
+                <PlaceholderImage
+                  label={card.title}
                   className="
                     w-full
                     h-[193px] md:h-[210px] lg:h-[240px] xl:h-[262px]
                     rounded-[14.55px] md:rounded-[20px] lg:rounded-[30px]
-                    object-cover
                   "
                 />
 

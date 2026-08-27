@@ -1,5 +1,5 @@
-import welcomeDesktop from "../../assets/welcome-specialized.png";
 import checkCircle from "../../assets/checksWelcome.png";
+import PlaceholderImage from "../../components/PlaceholderImage";
 
 type Feature = { id: string; label: string };
 
@@ -25,10 +25,7 @@ export default function WelcomeSection() {
 
           {/* Imagen izquierda */}
           <div className="flex justify-center md:justify-start md:shrink-0">
-            <img
-              src={welcomeDesktop}
-              alt="Cleaning team"
-              loading="lazy"
+            <PlaceholderImage
               className="
                 w-[260px] h-auto
                 md:w-[380px] md:h-[314px]

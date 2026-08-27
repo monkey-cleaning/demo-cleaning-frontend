@@ -1,6 +1,5 @@
 import HeroSection from '../sections/HomePage/HeroSection';
 import ServicesSection from '../sections/HomePage/ServicesSection';
-import InsuranceSection from '../sections/HomePage/InsuranceSection';
 import GeneralServicesSection from '../sections/HomePage/GeneralServices';
 import SpecializedServicesSection from '../sections/HomePage/SpecializedServices';
 import FormSection from '../sections/HomePage/FormSection';
@@ -14,7 +13,6 @@ export default function HomePage() {
     <div className="min-h-screen">
       <HeroSection />
       <ServicesSection />
-      <InsuranceSection />
       <GeneralServicesSection />
       <SpecializedServicesSection />
       <FormSection />

@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import logoDesktop from '../../assets/logo-desktop.png';
-import logoMobile from '../../assets/logo-desktop.png';
 import arrowDown from '../../assets/arrow-down.png';
 import { useNavigate } from 'react-router-dom';
 
@@ -127,7 +125,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       ============================================================ */}
       <div className={`${variant === 'transparent' ? 'pt-10' : 'py-4'} hidden lg:flex items-center justify-between max-w-6xl mx-auto px-1`}>
         <NavLink to="/" end>
-          <img src={logoDesktop} alt="Demo Cleaning Co." className="w-[142px] h-[60px]" />
+          <span className="font-montserrat font-bold text-navy text-2xl whitespace-nowrap">Demo Cleaning Co.</span>
         </NavLink>
 
         <nav className={`flex items-center gap-10 rounded-[24px] px-[18px] py-[20px] relative ${navPillBackground}`}>
@@ -190,7 +188,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       ============================================================ */}
       <div className={`${variant === 'transparent' ? 'pt-8' : 'py-3'} hidden md:flex lg:hidden items-center justify-between w-full px-[4%]`}>
         <NavLink to="/" end>
-          <img src={logoDesktop} alt="Demo Cleaning Co." className="w-[110px] h-auto" />
+          <span className="font-montserrat font-bold text-navy text-lg whitespace-nowrap">Demo Cleaning Co.</span>
         </NavLink>
 
         <nav className={`flex items-center gap-5 rounded-[20px] px-[14px] py-[14px] relative ${navPillBackground}`}>
@@ -252,7 +250,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
         <div className="flex items-center justify-between">
           <div className='ml-5'>
             <NavLink to="/" end>
-              <img src={logoMobile} alt="Demo Cleaning Co." className="w-[60px] h-[25px]" />
+              <span className="font-montserrat font-bold text-navy text-xs whitespace-nowrap">Demo Cleaning Co.</span>
             </NavLink>
           </div>
           <div className='mr-5'>

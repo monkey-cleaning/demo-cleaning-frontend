@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import jamesImage from '../../assets/james-hobb.png';
-import hannahBellImage from '../../assets/hannah-bell.png';
-import annImage from '../../assets/ann.png';
 
 interface Testimonial {
   id: number;
@@ -64,7 +61,7 @@ export default function TestimonialsSection() {
       date: "1 year ago",
       rating: 5,
       text: "I have used multiple house cleaning services over the last 10 years and I can say without a doubt that Monkey is the best.",
-      image: jamesImage,
+      image: null,
       hasCustomImage: true
     },
     {
@@ -82,7 +79,7 @@ export default function TestimonialsSection() {
       date: "1 year ago",
       rating: 5,
       text: "I used Demo Cleaning Co. for a move out cleaning and I was impressed by how quick, efficient and carefully they did the cleaning.",
-      image: hannahBellImage,
+      image: null,
       hasCustomImage: true
     },
     {
@@ -118,7 +115,7 @@ export default function TestimonialsSection() {
       date: "1 year ago",
       rating: 5,
       text: "Demo Cleaning Co. is the absolute best!! I cannot even begin to express how amazing their staff is. Not only were they kind and super friendly, but they practically radiated sunshine and rainbows! If you want a spotless home and an extremely delightful experience, then Demo Cleaning Co. is the way to go! Trust me, you won't find a better house cleaning service anywhere else!",
-      image: annImage,
+      image: null,
       hasCustomImage: true
     }
   ];

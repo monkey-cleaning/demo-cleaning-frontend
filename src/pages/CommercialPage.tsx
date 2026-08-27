@@ -8,7 +8,7 @@ export default function CommercialPage() {
   return (
     <div className="min-h-screen max">
       <HeroSection />
-      <ServicesSection initialActive="commercial" />
+      <ServicesSection />
       <FormSection />
       <Footer />
     </div>

@@ -1,6 +1,5 @@
 import Navbar from "../../components/layout/Navbar";
-import heroDesktop from "../../assets/blog-img.jpg";
-import heroMobile from "../../assets/blog-img-mobile.png";
+import PlaceholderImage from "../../components/PlaceholderImage";
 import checksWelcome from "../../assets/checksWelcome.png";
 
 const CHECKS = [
@@ -13,14 +12,10 @@ const CHECKS = [
 export default function HeroSection() {
   return (
     <section className="relative w-full">
-      <picture>
-        <source srcSet={heroDesktop} media="(min-width: 768px)" />
-        <img
-          src={heroMobile}
-          alt="Cleaning team working in a bright living room"
-          className="w-full object-right h-[350px] md:h-[600px] lg:h-[700px] xl:h-[800px] object-cover"
-        />
-      </picture>
+      <PlaceholderImage
+        className="w-full object-right h-[350px] md:h-[600px] lg:h-[700px] xl:h-[800px] object-cover"
+        label="Blog"
+      />
 
       <div className="fixed top-0 left-0 right-0 z-[100]">
         <Navbar variant="transparent" />
@@ -79,7 +74,7 @@ export default function HeroSection() {
           <ul className="mt-1 space-y-[8px]">
             {CHECKS.map((text) => (
               <li key={text} className="flex items-center gap-[6px]">
-                <img src={checksWelcome} alt="" className="w-[9px] h-[9px] object-contain" />
+                <PlaceholderImage className="w-[9px] h-[9px] object-contain" />
                 <span className="font-montserrat font-semibold text-[10px] leading-[100%] text-[#031634] mr-10">
                   {text}
                 </span>

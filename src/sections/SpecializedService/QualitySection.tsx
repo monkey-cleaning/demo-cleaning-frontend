@@ -1,4 +1,4 @@
-import qualityImg from "../../assets/quality-section.png";
+import PlaceholderImage from "../../components/PlaceholderImage";
 
 export default function QualitySection() {
   const handleBookNow = () => {
@@ -78,10 +78,7 @@ export default function QualitySection() {
 
           {/* ===== Right image ===== */}
           <div className="flex justify-center md:justify-end w-full md:w-auto md:shrink-0">
-            <img
-              src={qualityImg}
-              alt="Quality cleaning"
-              loading="lazy"
+            <PlaceholderImage
               className="
                 w-[303.53px] h-[267.34px]
                 md:w-[340px] md:h-[299px]

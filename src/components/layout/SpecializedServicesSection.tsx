@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import PlaceholderImage from "../PlaceholderImage";
 
 // All (overview)
 //import furnitureDesktop from "../../assets/furniture-desktop.png";
 import carpetDesktop from "../../assets/carpet-desktop.png";
 import tileDesktop from "../../assets/tile-desktop.png";
-import UpIcon from "../../assets/upIcon.png";
 
 // Detailed images
 //import fabricFurniture from "../../assets/fabric-furniture.png";
@@ -18,9 +18,6 @@ import ecoCarpet from "../../assets/eco-carpet.png";
 import standardTile from "../../assets/standard-tile.png";
 import groutTile from "../../assets/grout-tile.png";
 import floorTile from "../../assets/floor-tile.png";
-
-// Check icon for includes
-import checkServices from "../../assets/check-services.png";
 
 type CategoryId = "all" | /*"furniture" |*/ "carpet" | "tile";
 
@@ -358,10 +355,7 @@ export default function SpecializedServicesSection({
                 key={card.title}
                 className="flex flex-col items-start w-full h-full space-y-4"
               >
-                <img
-                  src={card.imageDesktop}
-                  alt={card.title}
-                  loading="lazy"
+                <PlaceholderImage
                   className="
                     w-full
                     h-[193px] md:h-[210px] lg:h-[240px] xl:h-[262px]
@@ -407,9 +401,7 @@ export default function SpecializedServicesSection({
                 >
                   <span className="hidden md:block">{card.cta}</span>
                   <span className="block md:hidden">Explore Service</span>
-                  <img
-                    src={UpIcon}
-                    alt=""
+                  <PlaceholderImage
                     className="w-[8px] h-[8px] md:w-[10px] md:h-[10px] lg:w-[12px] lg:h-[10px]"
                   />
                 </button>
@@ -424,10 +416,7 @@ export default function SpecializedServicesSection({
                 key={card.title}
                 className="flex flex-col items-start w-full space-y-3 md:space-y-4"
               >
-                <img
-                  src={card.image}
-                  alt={card.title}
-                  loading="lazy"
+                <PlaceholderImage
                   className="
                     w-full
                     h-[193px] md:h-[210px] lg:h-[240px] xl:h-[262px]
@@ -467,10 +456,7 @@ export default function SpecializedServicesSection({
                 <ul className="mt-2 space-y-2 md:space-y-4 lg:space-y-6">
                   {card.includes.map((inc, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <img
-                        src={checkServices}
-                        alt=""
-                        loading="lazy"
+                      <PlaceholderImage
                         className="w-[10px] h-[10px] md:w-[12px] md:h-[12px] mt-[2px] shrink-0"
                       />
                       <span className="

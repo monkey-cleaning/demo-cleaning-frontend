@@ -6,8 +6,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy: '#031634',
-        gold: '#EBC991',
+        navy: '#1E2A38',
+        gold: '#6FA8A0',
       },
       fontFamily: {
         montserrat: ['Montserrat', 'system-ui', 'sans-serif'],

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
-import logoDesktop from '../../assets/logo-desktop.png';
 import whatsappIcon from '../../assets/whatsapp.png';
+import PlaceholderImage from '../../components/PlaceholderImage';
 
 const STORAGE_KEY = 'monkeyCleaningFormData';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
@@ -849,7 +849,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
                 <div>
                   {/* Logo */}
                   <div className="mb-8 justify-center items-center mx-auto">
-                    <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 mx-auto" />
+                    <PlaceholderImage className="h-12 mx-auto" />
                   </div>
 
                   {/* Steps - All completed */}
@@ -912,7 +912,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
         <div className="md:hidden max-w-[363px] mx-auto mt-[-70px]">
           <div className="bg-[#F1F0FB] rounded-[28px] p-6">
             <div className="text-center mb-10">
-              <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 w-auto mx-auto" />
+              <PlaceholderImage className="h-12 w-auto mx-auto" />
             </div>
             <div className="bg-white rounded-[20px] p-6 border border-green-200">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -969,7 +969,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
                 {/* Logo */}
                 {/* CA2: shorter mb at tablet so logo doesn't push steps below fold */}
                 <div className="mb-6 lg:mb-[100px] justify-center items-center mx-auto">
-                  <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 mx-auto" />
+                  <PlaceholderImage className="h-12 mx-auto" />
                 </div>
 
                 {/* Steps */}
@@ -1116,7 +1116,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
         <div className="bg-[#F1F0FB] rounded-[28px] p-3">
           {/* Logo */}
           <div className="text-center mb-10">
-            <img src={logoDesktop} alt="Demo Cleaning Co." className="h-12 w-auto mx-auto" />
+            <PlaceholderImage className="h-12 w-auto mx-auto" />
           </div>
 
           {/* Form Type Toggle */}
