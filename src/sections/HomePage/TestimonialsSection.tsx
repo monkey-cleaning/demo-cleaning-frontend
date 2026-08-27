@@ -72,7 +72,7 @@ export default function TestimonialsSection() {
       name: "Dave Edwards",
       date: "1 year ago",
       rating: 5,
-      text: "Very impressed with Demo Cleaning Co.. Had them do a thorough house cleaning over two sessions over a couple of days",
+      text: "Very impressed with Demo Cleaning Co. Had them do a thorough house cleaning over two sessions over a couple of days",
       image: null,
       hasCustomImage: false
     },

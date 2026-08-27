@@ -81,13 +81,13 @@ export default function BlogSection() {
     <>
       <Helmet>
         <title>Cleaning Services Victoria BC | Demo Cleaning Co.</title>
-        <meta name="description" content="Expert tips, company updates, and home care insights from Demo Cleaning Co.. Learn professional cleaning techniques and home maintenance advice." />
+        <meta name="description" content="Expert tips, company updates, and home care insights from Demo Cleaning Co. Learn professional cleaning techniques and home maintenance advice." />
         <meta name="keywords" content="cleaning tips, home care, cleaning blog, house cleaning advice, professional cleaning" />
-        <link rel="canonical" href="https://monkeycleaning.ca/blog" />
+        <link rel="canonical" href="https://demo-cleaning-frontend.onrender.com/blog" />
         <meta property="og:title" content="The Clean Living Blog | Demo Cleaning Co. Canada" />
-        <meta property="og:description" content="Expert tips, company updates, and home care insights from Demo Cleaning Co.." />
+        <meta property="og:description" content="Expert tips, company updates, and home care insights from Demo Cleaning Co." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://monkeycleaning.ca/blog" />
+        <meta property="og:url" content="https://demo-cleaning-frontend.onrender.com/blog" />
       </Helmet>
 
       <section className="w-full py-16 mt-[-40px] md:mt-[-20px] lg:mt-0 md:py-24 bg-white">

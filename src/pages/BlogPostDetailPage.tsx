@@ -132,7 +132,7 @@ export default function BlogPostDetailPage() {
 
   const pageTitle = (post.seoTitle || post.title) + " | Demo Cleaning Co.";
   const pageDescription = post.seoDescription || post.excerpt.slice(0, 155);
-  const baseOrigin = typeof window !== "undefined" ? window.location.origin : "https://landing-monkey-frontend.onrender.com";
+  const baseOrigin = typeof window !== "undefined" ? window.location.origin : "https://demo-cleaning-frontend.onrender.com";
   const url = `${baseOrigin}/blog/${post.slug}`;
   const ogImage = post.image;
   const ogImageAlt = post.imageAlt || post.title;
