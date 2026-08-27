@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Calendar, ExternalLink, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -116,9 +116,7 @@ interface CalEvent {
   startHour: number;
   endHour: number;
   durationH: number;
-  organizer: string | null;
   clientId: string | null;
-  htmlLink: string | null;
   // seriesId apunta al maestro de la serie (se auto-referencia si el propio
   // evento ES el maestro); isSeriesMaster distingue maestro de instancia.
   seriesId: string | null;
@@ -2853,11 +2851,6 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         <button onClick={() => { onAssign(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Assign team"><Users size={15} /></button>
         {/* LAB309: opens NewEvent prefilled with this event's data, date/time left blank */}
         <button onClick={() => { onDuplicate(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Duplicate"><Copy size={15} /></button>
-        {event.htmlLink && (
-          <a href={event.htmlLink} target="_blank" rel="noreferrer" className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Open in Google Calendar">
-            <ExternalLink size={15} />
-          </a>
-        )}
         {confirmDelete ? (
           <div className="flex items-center gap-1 ml-1">
             <button onClick={() => handleDelete()} disabled={deleting} className="text-xs font-medium py-1 px-2.5 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors">
