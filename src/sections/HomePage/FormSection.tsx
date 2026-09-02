@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import whatsappIcon from '../../assets/whatsapp.png';
 import PlaceholderImage from '../../components/PlaceholderImage';
+import { BRAND_NAME, whatsappUrl } from '../../config/brand';
 
 const STORAGE_KEY = 'demoCleaningFormData';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
-const WHATSAPP_NUMBER = '16045550142';
-const WHATSAPP_MESSAGE =
-  "Hi! I'm interested in booking a cleaning service with Demo Cleaning Co.";
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  WHATSAPP_MESSAGE
-)}`;
+const WHATSAPP_URL = whatsappUrl(
+  `Hi! I'm interested in booking a cleaning service with ${BRAND_NAME}`
+);
 
 
 interface FormSectionProps {
