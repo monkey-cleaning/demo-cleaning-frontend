@@ -50,7 +50,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       subpages: [
         //{ path: '/services/specialized/furniture', label: 'Furniture Cleaning' },
         { path: '/services/specialized/carpet', label: 'Carpet Cleaning' },
-        { path: '/services/specialized/tile', label: 'Tile Cleaning' }
+        { path: '/services/specialized/tile', label: 'Rug Washing' }
       ]
     },
     blog: { path: '/blog', label: 'Blog' }

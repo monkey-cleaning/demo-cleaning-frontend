@@ -1,5 +1,7 @@
 import Navbar from "../../components/layout/Navbar";
-import PlaceholderImage from "../../components/PlaceholderImage";
+import heroDesktop from "../../assets/blog-img.jpg";
+import heroMobile from "../../assets/blog-img-mobile.jpg";
+import checksWelcome from "../../assets/checksWelcome.png";
 
 const CHECKS = [
   "Trained, trusted staff",
@@ -11,8 +13,15 @@ const CHECKS = [
 export default function HeroSection() {
   return (
     <section className="relative w-full">
-        <PlaceholderImage className="w-full object-right h-[350px] md:h-[600px] lg:h-[700px] xl:h-[800px] object-cover"
+      <picture>
+        <source srcSet={heroDesktop} media="(min-width: 768px)" />
+        <img
+          src={heroMobile}
+          alt="Cleaning team working in a bright living room"
+          className="w-full object-right-top h-[350px] md:h-[600px] lg:h-[700px] xl:h-[800px] object-cover"
         />
+      </picture>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 md:h-32 bg-gradient-to-b from-white via-white/60 to-transparent z-[1]" />
 
       <div className="fixed top-0 left-0 right-0 z-[100]">
         <Navbar variant="transparent" />
@@ -45,7 +54,10 @@ export default function HeroSection() {
           <ul className="space-y-[12px] lg:space-y-[16px] xl:space-y-[20px]">
             {CHECKS.map((text) => (
               <li key={text} className="flex items-center gap-[8px] lg:gap-[10px]">
-                <PlaceholderImage
+                <img
+                  src={checksWelcome}
+                  alt="check"
+                  loading="lazy"
                   className="w-[14px] h-[14px] lg:w-[16px] lg:h-[16px] xl:w-[18px] xl:h-[18px] object-contain"
                 />
                 <span className="
@@ -70,7 +82,10 @@ export default function HeroSection() {
           <ul className="mt-1 space-y-[8px]">
             {CHECKS.map((text) => (
               <li key={text} className="flex items-center gap-[6px]">
-                <PlaceholderImage
+                <img
+                  src={checksWelcome}
+                  alt="check"
+                  loading="lazy"
                   className="w-[9px] h-[9px] object-contain"
                 />
                 <span className="font-montserrat font-semibold text-[7.76px] leading-[100%] text-[#031634]">

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { API_BASE_URL } from '../../api/client';
-import PlaceholderImage from '../../components/PlaceholderImage';
 
 type BlogPost = {
   id: number;
@@ -150,14 +149,16 @@ export default function BlogSection() {
                       transition: 'opacity 0.5s',
                     }}
                   >
-                    <div
+                    <img
+                      src={post.image}
+                      alt={post.title}
                       style={{
                         width: `${DESKTOP_CARD_W}px`,
                         height: '312px',
+                        borderRadius: '6px',
+                        objectFit: 'cover',
                       }}
-                    >
-                      <PlaceholderImage className="w-full h-full rounded-[6px]" />
-                    </div>
+                    />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <span style={{ width: 'fit-content', padding: '4px 12px', borderRadius: '36px', background: '#031634', boxShadow: '0px 1px 2px rgba(105,81,255,0.05)', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: '12px', lineHeight: '18px', color: '#FFFFFF', textAlign: 'center' }}>
                         {post.category}
@@ -210,8 +211,11 @@ export default function BlogSection() {
             <div className="grid grid-cols-2 gap-6">
               {blogPosts.slice(0, 4).map((post) => (
                 <article key={post.id} className="flex flex-col gap-4">
-                  <PlaceholderImage
+                  <img
+                    src={post.image}
+                    alt={post.title}
                     className="w-full object-cover rounded-md"
+                    style={{ height: 'clamp(160px, 22vw, 260px)' }}
                   />
                   <div className="flex flex-col gap-3">
                     <span style={{ width: 'fit-content', padding: '3px 10px', borderRadius: '36px', background: '#031634', fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: '11px', lineHeight: '18px', color: '#FFFFFF' }}>

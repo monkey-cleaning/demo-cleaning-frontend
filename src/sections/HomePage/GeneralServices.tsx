@@ -1,27 +1,29 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PlaceholderImage from '../../components/PlaceholderImage';
+import residentialImg from '../../assets/residential-img.jpg';
+import commercialImg from '../../assets/commercial-img.jpg';
+import officesImg from '../../assets/offices-img.jpg';
 
 const services = [
   {
     id: 1,
     title: 'Residential',
-    description: 'Comprehensive home cleaning tailored to your lifestyle',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=500&q=80',
+    description: 'In-home carpet and rug cleaning tailored to your lifestyle',
+    image: residentialImg,
     linkTo: '/services/general/residential'
   },
   {
     id: 2,
     title: 'Commercial',
-    description: 'Professional cleaning solutions for businesses of all sizes',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&q=80',
+    description: 'Carpet cleaning solutions for businesses of all sizes',
+    image: commercialImg,
     linkTo: '/services/general/commercial'
   },
   {
     id: 3,
     title: 'Offices',
-    description: 'Spotless workspaces that boost productivity and morale',
-    image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=500&q=80',
+    description: 'Fresh office carpet and upholstery that lift the workspace',
+    image: officesImg,
     linkTo: '/services/general/offices'
   }
 ];
@@ -121,7 +123,10 @@ export default function GeneralServicesSection() {
               }}
               onClick={() => handleCardClick(service.linkTo, index)}
             >
-              <PlaceholderImage
+              <img
+                src={service.image}
+                alt={service.title}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
@@ -193,7 +198,7 @@ export default function GeneralServicesSection() {
                   borderRadius: isCenter ? '9.25px' : '7.24px'
                 }}
               >
-                <PlaceholderImage className="w-full h-full object-cover" />
+                <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className={`absolute bottom-0 left-0 right-0 text-white ${isCenter ? 'p-4' : 'p-3'}`}>
                   <h3 className={`font-bold mb-1 ${isCenter ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: 'Montserrat, sans-serif' }}>
