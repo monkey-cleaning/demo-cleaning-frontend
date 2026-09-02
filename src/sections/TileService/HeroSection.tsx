@@ -1,6 +1,7 @@
 import Navbar from '../../components/layout/Navbar';
+import heroDesktop from '../../assets/tile-img.jpg';
+import heroMobile from '../../assets/tile-img-mobile.jpg';
 import rightIcon from '../../assets/rightIcon.png';
-import PlaceholderImage from '../../components/PlaceholderImage';
 
 export default function HeroSection() {
   const handleBookNow = () => {
@@ -10,14 +11,21 @@ export default function HeroSection() {
 
   return (
     <section className="relative w-full">
-        <PlaceholderImage className="
-            w-full object-cover
+      <picture>
+        <source srcSet={heroDesktop} media="(min-width: 768px)" />
+        <img
+          src={heroMobile}
+          alt="Cleaning team working in a bright living room"
+          className="
+            w-full object-cover object-top
             h-[350px]
             md:h-[500px]
             lg:h-[700px]
             xl:h-[800px]
           "
         />
+      </picture>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 md:h-32 bg-gradient-to-b from-white via-white/60 to-transparent z-[1]" />
 
       <div className="fixed top-0 left-0 right-0 z-[100]">
         <Navbar variant="transparent" />
@@ -39,7 +47,7 @@ export default function HeroSection() {
             text-[28px] lg:text-[48px]
             max-w-[380px] lg:max-w-[592px]
           ">
-            Tile Cleaning
+            Rug Washing
           </h1>
 
           <p className="
@@ -48,7 +56,7 @@ export default function HeroSection() {
             text-[14px] lg:text-[24px]
             max-w-[320px] lg:max-w-[510px]
           ">
-            Professional floor care that removes dirt, stains, and buildup — restoring the shine and cleanliness of your tiles and grout.
+            Off-site immersion washing that lifts embedded soil from area rugs and oriental carpets, restoring their colour, texture, and freshness.
           </p>
 
           <button
@@ -76,10 +84,10 @@ export default function HeroSection() {
         {/* ================= MOBILE (<768px) — unchanged ================= */}
         <div className="md:hidden flex flex-col items-center text-center px-4 pt-1">
           <h1 className="w-[191px] text-[16px] font-montserrat font-semibold leading-[100%] text-[#031634] mb-3 mt-5">
-            Tile Cleaning
+            Rug Washing
           </h1>
           <p className="w-[180px] text-[10px] font-quicksand font-medium leading-[100%] text-[#1E1E1E] mb-6">
-            Professional floor care that removes dirt, stains, and buildup — restoring the shine and cleanliness of your tiles and grout.
+            Off-site immersion washing that lifts embedded soil from area rugs and oriental carpets, restoring their colour, texture, and freshness.
           </p>
           <button
             onClick={handleBookNow}

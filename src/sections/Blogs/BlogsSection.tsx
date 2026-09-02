@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import UpIcon from "../../assets/upIcon.png";
 import rightArrowBlogs from "../../assets/arrow-right-blogs.png";
 import { api } from "../../api/client";
-import PlaceholderImage from "../../components/PlaceholderImage";
 
 type BlogPost = {
   id: number;
@@ -107,7 +107,7 @@ export default function BlogsSection() {
         <span className="font-montserrat font-semibold text-[14px] lg:text-[16px] leading-[100%] text-[#031634]">
           Read More
         </span>
-        <PlaceholderImage className="w-[10px] h-[10px] lg:w-[12px] lg:h-[10px]" />
+        <img src={UpIcon} alt="" loading="lazy" className="w-[10px] h-[10px] lg:w-[12px] lg:h-[10px]" />
       </button>
     </>
   );
@@ -180,8 +180,11 @@ export default function BlogsSection() {
                         key={post.id}
                         className="flex flex-col items-start flex-shrink-0 w-[300px] lg:w-[340px] xl:w-[370px]"
                       >
-                        <PlaceholderImage
+                        <img
+                          src={post.image}
+                          alt={post.imageAlt || post.title}
                           className="w-full h-[212px] lg:h-[240px] xl:h-[262px] rounded-[20px] lg:rounded-[26px] xl:rounded-[30px] object-cover"
+                          loading="lazy"
                         />
                         <CardContent post={post} />
                       </article>
@@ -214,8 +217,11 @@ export default function BlogsSection() {
                       key={post.id}
                       className="flex flex-col items-start w-full"
                     >
-                      <PlaceholderImage
+                      <img
+                        src={post.image}
+                        alt={post.imageAlt || post.title}
                         className="w-full h-[212px] lg:h-[240px] xl:h-[262px] rounded-[20px] lg:rounded-[26px] xl:rounded-[30px] object-cover"
+                        loading="lazy"
                       />
                       <CardContent post={post} />
                     </article>
@@ -231,8 +237,11 @@ export default function BlogsSection() {
                   key={post.id}
                   className="flex flex-col items-start w-[282.43px] space-y-3"
                 >
-                  <PlaceholderImage
+                  <img
+                    src={post.image}
+                    alt={post.imageAlt || post.title}
                     className="w-[282.433px] h-[199.993px] rounded-[22.9px] object-cover"
+                    loading="lazy"
                   />
 
                   <div className="mt-3 w-[160px] h-[21.373px] px-[9.16px] py-[3.05px] rounded-[27.48px] bg-[#031634] shadow-[0px_0.76px_1.53px_0px_#6951FF0D] flex items-center justify-center">
@@ -265,7 +274,7 @@ export default function BlogsSection() {
                     <span className="font-montserrat font-semibold text-[12.21px] leading-[100%] text-[#031634]">
                       Read More
                     </span>
-                    <PlaceholderImage className="w-[9px] h-[9px]" />
+                    <img src={UpIcon} alt="up icon" loading="lazy" className="w-[9px] h-[9px]" />
                   </button>
                 </article>
               ))}

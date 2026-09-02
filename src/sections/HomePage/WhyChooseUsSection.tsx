@@ -1,29 +1,35 @@
-import satisfactionImage from '../../assets/satisfaction.png';
+import satisfactionImage from '../../assets/satisfaction.jpg';
 import onTimeImage from '../../assets/onTime.jpg';
-import ecoFriendlyImage from '../../assets/ecoFriendly.png';
-import vettedImage from '../../assets/vetted.png';
+import ecoFriendlyImage from '../../assets/ecoFriendly.jpg';
+import vettedImage from '../../assets/vetted.jpg';
 import checkIcon from '../../assets/check.png';
-import PlaceholderImage from '../../components/PlaceholderImage';
 
 export default function WhyChooseUsSection() {
+  // objectPosition: estas fotos son horizontales/bodegón dentro de una tarjeta
+  // vertical con object-cover; sin esto el sujeto (reloj, alfombra, frascos)
+  // queda fuera de cuadro.
   const cards = [
     {
       image: satisfactionImage,
+      objectPosition: 'center 68%',
       title: 'Satisfaction Guarantee',
       description: "We're not happy until you're happy. If something's not right, we'll make it right"
     },
     {
       image: onTimeImage,
+      objectPosition: '34% 58%',
       title: 'On-Time, Every Time',
       description: 'Respect for your schedule is our priority. We arrive on time and work efficiently'
     },
     {
       image: ecoFriendlyImage,
+      objectPosition: 'center 45%',
       title: 'Eco-Friendly Products',
       description: 'We use only certified green cleaning solutions'
     },
     {
       image: vettedImage,
+      objectPosition: 'center 22%',
       title: 'Vetted Team Members',
       description: 'Rigorous checks and training for every team member'
     }
@@ -58,7 +64,7 @@ export default function WhyChooseUsSection() {
               className="relative rounded-[14.69px] overflow-hidden flex-shrink-0"
               style={{ width: '250.5px', height: '323.63px' }}
             >
-              <PlaceholderImage className="w-full h-full object-cover" />
+              <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: card.objectPosition }} />
               <div
                 className="absolute bottom-0 left-0 right-0 flex flex-col backdrop-blur-sm"
                 style={{ height: '107.82px', padding: '7.35px 14.69px 14.69px 14.69px', gap: '6.53px', background: 'transparent' }}
@@ -93,7 +99,7 @@ export default function WhyChooseUsSection() {
               height: 'clamp(280px, 30vw, 396px)'
             }}
           >
-            <PlaceholderImage className="w-full h-full object-cover" />
+            <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: card.objectPosition }} />
             <div
               className="absolute bottom-0 left-0 right-0 flex flex-col backdrop-blur-sm"
               style={{ height: '132.08px', padding: '9px 18px 18px 18px', gap: '8px', background: 'transparent' }}

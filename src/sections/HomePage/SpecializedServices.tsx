@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PlaceholderImage from '../../components/PlaceholderImage';
+import carpetImg from '../../assets/carpet-img.jpg';
+import tileImg from '../../assets/tile-img.jpg';
 
 const services = [
   /*{
@@ -13,15 +14,15 @@ const services = [
   {
     id: 2,
     title: 'Carpet Cleaning',
-    description: 'Professional cleaning solutions for businesses of all sizes',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&q=80',
+    description: 'Deep steam cleaning that revives your carpets’ colour and texture',
+    image: carpetImg,
     linkTo: '/services/specialized/carpet'
   },
   {
     id: 3,
-    title: 'Tile Cleaning',
-    description: 'Spotless workspaces that boost productivity and morale',
-    image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=500&q=80',
+    title: 'Rug Washing',
+    description: 'Off-site immersion washing for area rugs and oriental carpets',
+    image: tileImg,
     linkTo: '/services/specialized/tile'
   }
 ];
@@ -118,7 +119,10 @@ export default function SpecializedServicesSection() {
               }}
               onClick={() => handleCardClick(index, service.linkTo)}
             >
-              <PlaceholderImage
+              <img
+                src={service.image}
+                alt={service.title}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
@@ -189,7 +193,7 @@ export default function SpecializedServicesSection() {
                   borderRadius: isCenter ? '9.25px' : '7.24px'
                 }}
               >
-                <PlaceholderImage className="w-full h-full object-cover" />
+                <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className={`absolute bottom-0 left-0 right-0 text-white ${isCenter ? 'p-4' : 'p-3'}`}>
                   <h3 className={`font-bold mb-1 ${isCenter ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -199,7 +203,7 @@ export default function SpecializedServicesSection() {
                     {card.description}
                   </p>
                   <button
-                    className="text-[9px] px-2 py-1 roundewd-full bg-white/50"
+                    className="text-[9px] px-2 py-1 rounded-full bg-white/50"
                     style={{ fontFamily: 'Montserrat, sans-serif' }}
                     onClick={(e) => handleExploreClick(card.linkTo, e)}
                   >

@@ -1,5 +1,6 @@
 import Navbar from '../../components/layout/Navbar';
-import PlaceholderImage from '../../components/PlaceholderImage';
+import heroDesktop from '../../assets/carpet-img.jpg';
+import heroMobile from '../../assets/carpet-img-mobile.jpg';
 import rightIcon from '../../assets/rightIcon.png';
 
 export default function HeroSection() {
@@ -10,15 +11,21 @@ export default function HeroSection() {
 
   return (
     <section className="relative w-full">
-        <PlaceholderImage
+      <picture>
+        <source srcSet={heroDesktop} media="(min-width: 768px)" />
+        <img
+          src={heroMobile}
+          alt="Cleaning team working in a bright living room"
           className="
-            w-full object-cover
+            w-full object-cover object-top
             h-[350px]
             md:h-[500px]
             lg:h-[700px]
             xl:h-[800px]
           "
         />
+      </picture>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 md:h-32 bg-gradient-to-b from-white via-white/60 to-transparent z-[1]" />
 
       <div className="fixed top-0 left-0 right-0 z-[100]">
         <Navbar variant="transparent" />
@@ -73,7 +80,7 @@ export default function HeroSection() {
             ">
               Book Now
             </span>
-            <PlaceholderImage className="w-[14px] h-[14px] lg:w-[18px] lg:h-[17px]" />
+            <img src={rightIcon} alt="" className="w-[14px] h-[14px] lg:w-[18px] lg:h-[17px]" />
           </button>
         </div>
 

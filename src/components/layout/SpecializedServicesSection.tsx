@@ -1,23 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import PlaceholderImage from "../PlaceholderImage";
 
 // All (overview)
 //import furnitureDesktop from "../../assets/furniture-desktop.png";
-import carpetDesktop from "../../assets/carpet-desktop.png";
-import tileDesktop from "../../assets/tile-desktop.png";
+import carpetDesktop from "../../assets/carpet-desktop.jpg";
+import tileDesktop from "../../assets/tile-desktop.jpg";
+import UpIcon from "../../assets/upIcon.png";
 
 // Detailed images
 //import fabricFurniture from "../../assets/fabric-furniture.png";
 //import leatherFurniture from "../../assets/leather-furniture.png";
 //import cushionsFurniture from "../../assets/cushions-furniture.png";
 
-import standardCarpet from "../../assets/standard-carpet.png";
-import deepCarpet from "../../assets/deep-carpet.png";
-import ecoCarpet from "../../assets/eco-carpet.png";
+import standardCarpet from "../../assets/standard-carpet.jpg";
+import deepCarpet from "../../assets/deep-carpet.jpg";
+import ecoCarpet from "../../assets/eco-carpet.jpg";
 
-import standardTile from "../../assets/standard-tile.png";
-import groutTile from "../../assets/grout-tile.png";
-import floorTile from "../../assets/floor-tile.png";
+import standardTile from "../../assets/standard-tile.jpg";
+import groutTile from "../../assets/grout-tile.jpg";
+import floorTile from "../../assets/floor-tile.jpg";
+
+// Check icon for includes
+import checkServices from "../../assets/check-services.png";
 
 type CategoryId = "all" | /*"furniture" |*/ "carpet" | "tile";
 
@@ -29,7 +32,7 @@ const CATEGORIES: { id: CategoryId; label: string }[] = [
   { id: "all", label: "All" },
   //{ id: "furniture", label: "Furniture" },
   { id: "carpet", label: "Carpet" },
-  { id: "tile", label: "Tile" },
+  { id: "tile", label: "Rugs" },
 ];
 
 type OverviewCard = {
@@ -62,9 +65,9 @@ const OVERVIEW_CARDS: OverviewCard[] = [
   },
   {
     id: "tile",
-    title: "Tile Cleaning",
+    title: "Rug Washing",
     description:
-      "Specialized cleaning that restores brightness and removes buildup from tiles and grout lines. We use high-performance equipment and eco-safe products to bring back your floor's natural shine.",
+      "Off-site immersion washing for area rugs and oriental carpets. We dust, wash, rinse, and controlled-dry every rug to lift years of embedded soil and bring the pile back to life.",
     imageDesktop: tileDesktop,
     imageMobile: tileDesktop,
     cta: "Explore Service",
@@ -162,44 +165,44 @@ const DETAILED_CARDS: DetailedCard[] = [
     ],
   },
 
-  // ===== TILE =====
+  // ===== RUG WASHING =====
   {
     category: "tile",
-    title: "Standard Tile Cleaning",
+    title: "Standard Rug Wash",
     description:
-      "Deep cleaning that removes dirt, stains, and buildup, restoring your tile's natural shine and color.",
+      "A full immersion wash for everyday area rugs — deep soil and odour removal with a gentle, colour-safe process.",
     image: standardTile,
     includes: [
-      "Surface scrubbing and washing",
-      "Grout line detailing",
-      "Stain and residue removal",
-      "Quick dry finish",
+      "Dry soil removal and dusting",
+      "Full immersion wash and rinse",
+      "Spot and odour treatment",
+      "Controlled-air drying",
     ],
   },
   {
     category: "tile",
-    title: "Grout Restoration",
+    title: "Fringe & Edge Detailing",
     description:
-      "Targeted treatment that renews discolored or stained grout, leaving floors bright and even again.",
+      "Hand detailing for fringes, borders, and worn edges — the areas a general wash always misses.",
     image: groutTile,
     includes: [
-      "Deep grout scrubbing",
-      "Stain and mold removal",
-      "Color renewal treatment",
-      "Protective sealing application",
+      "Fibre and dye stability test",
+      "Hand-scrubbed fringes and borders",
+      "Edge and binding repair check",
+      "Flat drying to protect the weave",
     ],
   },
   {
     category: "tile",
-    title: "Floor Polishing & Sealing",
+    title: "Large & Oversized Rugs",
     description:
-      "Professional polishing and sealing for lasting protection and a spotless, glossy finish.",
+      "Rotary-machine washing for room-sized and heavy rugs, plus free pickup and delivery across the service area.",
     image: floorTile,
     includes: [
-      "Machine buffing and polishing",
-      "Surface resealing treatment",
-      "Shine and protection coating",
-      "Slip-resistant finish option",
+      "Rotary pre-scrub and deep rinse",
+      "Fabric protector application",
+      "Wrapped for storage or delivery",
+      "Free local pickup and drop-off",
     ],
   },
 ];
@@ -207,14 +210,14 @@ const DETAILED_CARDS: DetailedCard[] = [
 const DYNAMIC_SERVICES: Record<Exclude<CategoryId, "all">, string> = {
   //furniture: "While we can customize your furniture care plan to suit your needs, most clients schedule regular cleaning or seasonal refreshes",
   carpet:    "We tailor every plan to fit your home's rhythm. Most clients schedule regular cleanings, but you can choose the service that suits your needs best",
-  tile:      "We tailor every plan to fit your home's rhythm. Most clients schedule regular cleanings, but you can choose the service that suits your needs best",
+  tile:      "Every rug is assessed and priced individually. Pick the wash that fits your rug, and we handle pickup and delivery",
 };
 
 const DYNAMIC_TITLES: Record<CategoryId, string> = {
   all:       "Precision Cleaning for Every Surface",
   //furniture: "Choose Your Home Cleaning Plan",
   carpet:    "Choose Your Home Cleaning Plan",
-  tile:      "Choose Your Home Cleaning Plan",
+  tile:      "Choose Your Rug Wash",
 };
 
 export default function SpecializedServicesSection({
@@ -355,7 +358,10 @@ export default function SpecializedServicesSection({
                 key={card.title}
                 className="flex flex-col items-start w-full h-full space-y-4"
               >
-                <PlaceholderImage
+                <img
+                  src={card.imageDesktop}
+                  alt={card.title}
+                  loading="lazy"
                   className="
                     w-full
                     h-[193px] md:h-[210px] lg:h-[240px] xl:h-[262px]
@@ -401,7 +407,9 @@ export default function SpecializedServicesSection({
                 >
                   <span className="hidden md:block">{card.cta}</span>
                   <span className="block md:hidden">Explore Service</span>
-                  <PlaceholderImage
+                  <img
+                    src={UpIcon}
+                    alt=""
                     className="w-[8px] h-[8px] md:w-[10px] md:h-[10px] lg:w-[12px] lg:h-[10px]"
                   />
                 </button>
@@ -416,7 +424,10 @@ export default function SpecializedServicesSection({
                 key={card.title}
                 className="flex flex-col items-start w-full space-y-3 md:space-y-4"
               >
-                <PlaceholderImage
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  loading="lazy"
                   className="
                     w-full
                     h-[193px] md:h-[210px] lg:h-[240px] xl:h-[262px]
@@ -456,7 +467,10 @@ export default function SpecializedServicesSection({
                 <ul className="mt-2 space-y-2 md:space-y-4 lg:space-y-6">
                   {card.includes.map((inc, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <PlaceholderImage
+                      <img
+                        src={checkServices}
+                        alt=""
+                        loading="lazy"
                         className="w-[10px] h-[10px] md:w-[12px] md:h-[12px] mt-[2px] shrink-0"
                       />
                       <span className="

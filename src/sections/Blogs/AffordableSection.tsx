@@ -1,4 +1,4 @@
-import PlaceholderImage from "../../components/PlaceholderImage";
+import affordableImg from "../../assets/affordable-img.jpg";
 
 export default function AffordableSection() {
   const handleBookNow = () => {
@@ -76,7 +76,10 @@ export default function AffordableSection() {
 
           {/* ===== Right image ===== */}
           <div className="flex justify-center md:justify-end w-full md:w-auto md:shrink-0">
-            <PlaceholderImage
+            <img
+              src={affordableImg}
+              alt="Affordable cleaning"
+              loading="lazy"
               className="
                 w-[303.53px] h-[267.34px]
                 md:w-[340px] md:h-[299px]

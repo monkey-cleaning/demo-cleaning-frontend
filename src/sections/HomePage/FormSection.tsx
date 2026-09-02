@@ -287,7 +287,7 @@ export default function FormSection({ defaultFormType = 'general' }: FormSection
 
   const serviceOptions = {
     general: ['House Cleaning', 'Office Cleaning', 'Apartment Cleaning'],
-    specialized: [/*'Furniture Cleaning',*/ 'Carpet Cleaning', 'Tile Cleaning']
+    specialized: [/*'Furniture Cleaning',*/ 'Carpet Cleaning', 'Rug Washing']
   };
 
   const cleaningFrequencies = ['Weekly', 'Biweekly', 'Monthly', 'One Time Cleaning', 'Move In / Move Out'];
