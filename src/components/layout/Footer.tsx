@@ -5,10 +5,7 @@ import facebookIcon from '../../assets/facebook.png';
 import whatsappIcon from '../../assets/whatsappFooter.png';
 import mIcon from '../../assets/m.png';
 import iconoInput from '../../assets/iconoInput.png';
-
-// Placeholder ficticio (rango NANP reservado 555-01XX) — el real era de
-// Monkey Cleaning. LAB, ago 2026.
-const WHATSAPP_URL = 'https://wa.me/16045550142';
+import { BRAND_NAME, WHATSAPP_URL } from '../../config/brand';
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -68,7 +65,7 @@ export default function Footer() {
             {/* Columna izquierda */}
             <div>
               <div className="mb-[49px]">
-                <span className="font-['Montserrat'] font-bold text-white text-2xl">Demo Cleaning Co.</span>
+                <span className="font-['Montserrat'] font-bold text-white text-2xl">{BRAND_NAME}</span>
               </div>
 
               <p className="font-['Montserrat'] font-medium text-[18px] leading-[25px] mb-[49px] max-w-[452px]">
@@ -149,7 +146,7 @@ export default function Footer() {
 
           <div className="mt-[40px] flex items-center justify-between">
             <p className="font-['Montserrat'] font-medium text-[18px] leading-[30px] max-w-[608px]">
-              Copyright © {year} Demo Cleaning Co. | Powered by Demo Cleaning Co.
+              Copyright © {year} {BRAND_NAME} | Powered by {BRAND_NAME}
             </p>
             <div className="flex gap-[8px] font-['Montserrat'] font-medium text-[18px] leading-[30px]">
               <a href="/privacy" className="hover:underline">
@@ -175,7 +172,7 @@ export default function Footer() {
             {/* Columna izquierda */}
             <div className="flex-1 min-w-0">
               <div className="mb-[36px]">
-                <span className="font-['Montserrat'] font-bold text-white text-lg">Demo Cleaning Co.</span>
+                <span className="font-['Montserrat'] font-bold text-white text-lg">{BRAND_NAME}</span>
               </div>
 
               <p className="font-['Montserrat'] font-medium text-[15px] leading-[22px] mb-[36px]">
@@ -256,7 +253,7 @@ export default function Footer() {
 
           <div className="mt-[36px] flex flex-wrap items-center justify-between gap-y-2">
             <p className="font-['Montserrat'] font-medium text-[14px] leading-[28px]">
-              Copyright © {year} Demo Cleaning Co. | Powered by Demo Cleaning Co.
+              Copyright © {year} {BRAND_NAME} | Powered by {BRAND_NAME}
             </p>
             <div className="flex gap-[8px] font-['Montserrat'] font-medium text-[14px] leading-[28px] items-center">
               <a href="/privacy" className="hover:underline">
@@ -359,7 +356,7 @@ export default function Footer() {
         </div>
 
         <p className="font-['Montserrat'] font-medium text-[16.13px] leading-[34.56px]">
-          Copyright © {year} Demo Cleaning Co. | Powered by Demo Cleaning Co.
+          Copyright © {year} {BRAND_NAME} | Powered by {BRAND_NAME}
         </p>
       </div>
     </footer>
