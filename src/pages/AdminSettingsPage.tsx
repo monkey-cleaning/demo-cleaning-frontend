@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, History } from "lucide-react";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import AdminNavbar from '../components/admin/AdminNavbar';
+import HistoryDrawer from "../components/admin/HistoryDrawer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,7 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState<Settings>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -472,6 +474,14 @@ export default function AdminSettingsPage() {
           title="Settings"
           rightSlot={
             <>
+              <button
+                type="button"
+                onClick={() => setShowHistory(true)}
+                title="Settings change history"
+                className="p-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <History size={15} />
+              </button>
               {isDirty && (
                 <button
                   type="button"
@@ -921,6 +931,14 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       </div>
+
+      {showHistory && (
+        <HistoryDrawer
+          entityType="setting"
+          title="Settings history"
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </RequireAdmin>
   );
 }

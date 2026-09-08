@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen, History as HistoryIcon } from "lucide-react";
+import HistoryDrawer from "../components/admin/HistoryDrawer";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -2789,6 +2790,7 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [scopeChoiceForDelete, setScopeChoiceForDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -2851,6 +2853,8 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         <button onClick={() => { onAssign(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Assign team"><Users size={15} /></button>
         {/* LAB309: opens NewEvent prefilled with this event's data, date/time left blank */}
         <button onClick={() => { onDuplicate(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Duplicate"><Copy size={15} /></button>
+        {/* LAB418 — event.id ES el appointments.id en este fork (mapRow) */}
+        <button onClick={() => setShowHistory(true)} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Change history"><HistoryIcon size={15} /></button>
         {confirmDelete ? (
           <div className="flex items-center gap-1 ml-1">
             <button onClick={() => handleDelete()} disabled={deleting} className="text-xs font-medium py-1 px-2.5 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors">
@@ -2863,6 +2867,15 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         )}
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors ml-1"><X size={15} /></button>
       </div>
+
+      {showHistory && (
+        <HistoryDrawer
+          entityType="appointment"
+          entityId={event.id}
+          title={event.summary}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
 
       {scopeChoiceForDelete && (
         <RecurrenceScopeModal

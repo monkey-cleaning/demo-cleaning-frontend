@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Send, Upload, Trash2, ArrowLeft, AlertCircle, X, ChevronLeft, ChevronRight, Search, CalendarDays } from 'lucide-react';
+import { Plus, Send, Upload, Trash2, ArrowLeft, AlertCircle, X, ChevronLeft, ChevronRight, Search, CalendarDays, History } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   listInvoices, createInvoice, publishInvoice, sendInvoiceEmail, deleteInvoice,
@@ -9,6 +9,7 @@ import {
 import { api } from '../api/client';
 import RequireAdmin from '../components/admin/RequireAdmin';
 import AdminNavbar from '../components/admin/AdminNavbar';
+import HistoryDrawer from '../components/admin/HistoryDrawer';
 import { ClientFormModal } from '../components/admin/ClientFormModal';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -456,6 +457,7 @@ export default function AdminInvoicesPage() {
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null);
 
   const status = searchParams.get('status') ?? '';
   const page = Number(searchParams.get('page') ?? 1);
@@ -697,6 +699,13 @@ export default function AdminInvoicesPage() {
                                 <Send size={14} />
                               </button>
                             )}
+                            <button
+                              onClick={() => setHistoryInvoice(inv)}
+                              title="Change history"
+                              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                            >
+                              <History size={14} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -739,37 +748,41 @@ export default function AdminInvoicesPage() {
                         </div>
                       </div>
                       {/* Actions row */}
-                      {(inv.status === 'draft' || inv.status === 'published') && (
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
-                          {inv.status === 'draft' && (
-                            <>
-                              <button
-                                onClick={() => handlePublish(inv.id)}
-                                disabled={actionLoading === inv.id + '-publish'}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold disabled:opacity-40 transition-colors active:bg-blue-100"
-                              >
-                                <Upload size={12} /> Publish
-                              </button>
-                              <button
-                                onClick={() => handleDelete(inv.id)}
-                                disabled={actionLoading === inv.id + '-delete'}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold disabled:opacity-40 transition-colors active:bg-red-100"
-                              >
-                                <Trash2 size={12} /> Delete
-                              </button>
-                            </>
-                          )}
-                          {inv.status === 'published' && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                        {inv.status === 'draft' && (
+                          <>
                             <button
-                              onClick={() => handleSend(inv.id)}
-                              disabled={actionLoading === inv.id + '-send'}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-semibold disabled:opacity-40 transition-colors active:bg-indigo-100"
+                              onClick={() => handlePublish(inv.id)}
+                              disabled={actionLoading === inv.id + '-publish'}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold disabled:opacity-40 transition-colors active:bg-blue-100"
                             >
-                              <Send size={12} /> Send email
+                              <Upload size={12} /> Publish
                             </button>
-                          )}
-                        </div>
-                      )}
+                            <button
+                              onClick={() => handleDelete(inv.id)}
+                              disabled={actionLoading === inv.id + '-delete'}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold disabled:opacity-40 transition-colors active:bg-red-100"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          </>
+                        )}
+                        {inv.status === 'published' && (
+                          <button
+                            onClick={() => handleSend(inv.id)}
+                            disabled={actionLoading === inv.id + '-send'}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-semibold disabled:opacity-40 transition-colors active:bg-indigo-100"
+                          >
+                            <Send size={12} /> Send email
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setHistoryInvoice(inv)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-500 text-xs font-semibold transition-colors active:bg-gray-100"
+                        >
+                          <History size={12} /> History
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -807,6 +820,15 @@ export default function AdminInvoicesPage() {
           <CreateInvoiceModal
             onClose={() => setShowModal(false)}
             onCreated={load}
+          />
+        )}
+
+        {historyInvoice && (
+          <HistoryDrawer
+            entityType="invoice"
+            entityId={historyInvoice.id}
+            title={historyInvoice.doc_number ? `Invoice #${historyInvoice.doc_number}` : 'Invoice'}
+            onClose={() => setHistoryInvoice(null)}
           />
         )}
 

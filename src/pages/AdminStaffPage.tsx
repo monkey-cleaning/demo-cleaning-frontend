@@ -4,11 +4,12 @@ import {
   Plus, Search, X, ChevronLeft, ChevronRight,
   Phone, Mail, Pencil, Loader2, AlertCircle, RefreshCw,
   Shield, Car, CalendarOff, DollarSign,
-  CalendarDays, Clock,
+  CalendarDays, Clock, History,
 } from "lucide-react";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import { ScheduleEditorModal } from "../components/admin/ScheduleEditorModal";
 import AdminNavbar from '../components/admin/AdminNavbar';
+import HistoryDrawer from "../components/admin/HistoryDrawer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -605,6 +606,7 @@ function EmployeeDrawer({
   const [loading, setLoading] = useState(true);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     apiFetch<{ employee: Employee }>(`/api/admin/staff/${employeeId}`)
@@ -647,10 +649,25 @@ function EmployeeDrawer({
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 transition-colors mt-0.5">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+            <button onClick={() => setShowHistory(true)} title="Change history"
+              className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
+              <History size={16} />
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
+              <X size={16} />
+            </button>
+          </div>
         </div>
+
+        {showHistory && employee && (
+          <HistoryDrawer
+            entityType="employee"
+            entityId={employee.id}
+            title={employee.name}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
 
         <div className="overflow-y-auto flex-1 px-6 py-5">
           {loading ? (
@@ -811,6 +828,8 @@ export default function AdminStaffPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+  // LAB418 — atajo de historial a nivel fila.
+  const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
 
   // CA2: employee whose weekly schedule is being viewed
   const [scheduleEmployee, setScheduleEmployee] = useState<Employee | null>(null);
@@ -1115,6 +1134,11 @@ export default function AdminStaffPage() {
                             className="p-1.5 rounded-lg text-gray-400 hover:text-[#031634] hover:bg-gray-100 transition-colors">
                             <Pencil size={13} />
                           </button>
+                          <button onClick={() => setHistoryEmployee(emp)}
+                            title="Change history"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-[#031634] hover:bg-gray-100 transition-colors">
+                            <History size={13} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1263,6 +1287,15 @@ export default function AdminStaffPage() {
           employee={editingEmployee ?? undefined}
           onClose={() => { setCreatingNew(false); setEditingEmployee(null); }}
           onSaved={handleEmployeeSaved}
+        />
+      )}
+
+      {historyEmployee && (
+        <HistoryDrawer
+          entityType="employee"
+          entityId={historyEmployee.id}
+          title={historyEmployee.name}
+          onClose={() => setHistoryEmployee(null)}
         />
       )}
     </RequireAdmin>

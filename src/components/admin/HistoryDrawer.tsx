@@ -38,8 +38,12 @@ import {
 
 interface HistoryDrawerProps {
   entityType: HistoryEntityType;
-  /** Supabase uuid of the record. */
-  entityId: string;
+  /**
+   * Supabase uuid of the record. Se omite para `setting` (no tiene id propio —
+   * todas sus filas comparten un id global) → el drawer muestra TODO el
+   * historial de settings.
+   */
+  entityId?: string;
   /** Shown in the header — e.g. the client's name or the event summary. */
   title: string;
   onClose: () => void;
@@ -58,11 +62,8 @@ export default function HistoryDrawer({
     let cancelled = false;
     setRows(null);
     setError(null);
-    const params = new URLSearchParams({
-      entity_type: entityType,
-      entity_id: entityId,
-      limit: "100",
-    });
+    const params = new URLSearchParams({ entity_type: entityType, limit: "100" });
+    if (entityId) params.set("entity_id", entityId);
     api<HistoryResponse>(`/api/admin/history?${params.toString()}`)
       .then((data) => {
         if (!cancelled) setRows(data.history);
