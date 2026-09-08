@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -3772,6 +3772,145 @@ function WeekView({ anchor, events, draggedEvent, dragGrabOffsetPx, activeHighli
 
 const SWIPE_THRESHOLD_PX = 60;
 
+// ── MiniDatePicker ────────────────────────────────────────────────────────────
+// LAB422 (portado de Monkey Cleaning): popover que se abre desde el label de
+// período en la barra superior y desde el header de DayView. Navegar de semana
+// en semana hasta otro mes/año era engorroso — acá el admin elige día/mes/año
+// directo y el calendario salta a esa fecha (jumpToDate).
+const MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function MiniDatePicker({ selectedDate, onPick, onClose, align = "left" }: {
+  selectedDate: Date;
+  onPick: (iso: string) => void;
+  onClose: () => void;
+  align?: "left" | "center";
+}) {
+  const [mode, setMode] = useState<"days" | "months">("days");
+  const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(selectedDate));
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const selectedKey = isoDate(selectedDate);
+  const todayStr = todayVan();
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  const cells = useMemo(() => {
+    const first = startOfMonth(viewMonth);
+    const gridStart = new Date(first);
+    gridStart.setDate(first.getDate() - first.getDay());
+    const out: Date[] = [];
+    const cur = new Date(gridStart);
+    while (out.length < 42) { out.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+    return out;
+  }, [viewMonth]);
+
+  const btn = "flex items-center justify-center rounded-lg text-sm transition-colors";
+
+  return (
+    <div
+      ref={wrapRef}
+      className={`absolute top-full mt-2 z-50 w-[288px] rounded-xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-3 ${
+        align === "center" ? "left-1/2 -translate-x-1/2" : "left-0"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => setMode(m => (m === "days" ? "months" : "days"))}
+          className="px-2 py-1 rounded-lg text-sm font-medium text-gray-800 hover:bg-gray-100 transition-colors"
+        >
+          {mode === "days" ? fmtMonthYear(viewMonth) : viewMonth.getFullYear()}
+        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setViewMonth(d => (mode === "days" ? addMonths(d, -1) : new Date(d.getFullYear() - 1, d.getMonth(), 1)))}
+            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            aria-label={mode === "days" ? "Previous month" : "Previous year"}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={() => setViewMonth(d => (mode === "days" ? addMonths(d, 1) : new Date(d.getFullYear() + 1, d.getMonth(), 1)))}
+            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            aria-label={mode === "days" ? "Next month" : "Next year"}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {mode === "days" ? (
+        <>
+          <div className="grid grid-cols-7 mb-1">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <div key={i} className="text-center text-[11px] font-medium text-gray-400 py-1">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((cell, i) => {
+              const key = isoDate(cell);
+              const inMonth = cell.getMonth() === viewMonth.getMonth();
+              const isToday = key === todayStr;
+              const isSelected = key === selectedKey;
+              return (
+                <button
+                  key={i}
+                  onClick={() => onPick(key)}
+                  className={`${btn} h-9 w-9 mx-auto ${
+                    isSelected
+                      ? "bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                      : isToday
+                        ? "text-blue-600 font-semibold hover:bg-gray-100"
+                        : inMonth
+                          ? "text-gray-800 hover:bg-gray-100"
+                          : "text-gray-300 hover:bg-gray-100"
+                  }`}
+                >
+                  {cell.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-3 gap-1.5 py-1">
+          {MONTH_NAMES_SHORT.map((m, i) => {
+            const isCurrent = viewMonth.getFullYear() === selectedDate.getFullYear() && i === selectedDate.getMonth();
+            return (
+              <button
+                key={m}
+                onClick={() => { setViewMonth(new Date(viewMonth.getFullYear(), i, 1)); setMode("days"); }}
+                className={`${btn} h-10 ${isCurrent ? "bg-blue-600 text-white font-semibold hover:bg-blue-700" : "text-gray-700 hover:bg-gray-100"}`}
+              >
+                {m}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-2 pt-2 border-t border-gray-100 flex justify-end">
+        <button
+          onClick={() => onPick(todayStr)}
+          className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        >
+          Today
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DayView({ date, events, activeHighlights, conflictByEventId, spotlightEventId, lunchMissingByDate, teamOrder, draggedEvent, dragGrabOffsetPx, onCellClick, onEdit, onDelete, onAssign, onDuplicate, onNavigateDay, onJumpToDate, onDragStart, onMouseUpDrop }: {
   date: Date; events: CalEvent[];
   activeHighlights: Set<ConflictType>;
@@ -3793,7 +3932,8 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
   const dayKey = isoDate(date);
   const isToday = dayKey === todayVan();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  // LAB422: date-picker popover del header (misma estética que la barra desktop).
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   const [frontEventId, setFrontEventId] = useState<string | null>(null);
   // Live, grid-snapped drop preview — day is fixed in this view, only the hour moves.
@@ -3982,52 +4122,45 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       {/* Date header — tap arrows or swipe the grid below to change day;
-          tap the date itself to jump to any date via the native picker. */}
-      <div className="flex items-center justify-between px-2 py-2 border-b border-gray-200 bg-white flex-shrink-0 sticky top-0 z-10">
+          tap the date itself to open the date-picker (LAB422) y saltar a
+          cualquier día/mes/año. */}
+      <div className="flex items-center justify-between px-2 py-2 border-b border-gray-200 bg-white flex-shrink-0 sticky top-0 z-20">
         <button onClick={() => onNavigateDay(-1)} className="p-2 rounded-full hover:bg-gray-100 active:bg-gray-200 text-gray-500" aria-label="Previous day">
           <ChevronLeft size={20} />
         </button>
-        <div
-          className="relative flex items-center gap-2 px-2 py-1 rounded-lg active:bg-gray-100 cursor-pointer"
-          onClick={() => {
-            const el = dateInputRef.current;
-            if (!el) return;
-            // showPicker() opens the OS picker programmatically from anywhere in
-            // the tap target; falls back to .click() on browsers that lack it.
-            if (typeof (el as any).showPicker === "function") (el as any).showPicker();
-            else el.click();
-          }}
-        >
-          {/* Solo se pinta con el banner "Lunch coverage" activo — mismo criterio que WeekView. */}
-          {(() => {
-            const missingLunch = activeHighlights.has('lunch') ? lunchMissingByDate.get(dayKey) : undefined;
-            return (
-              <span
-                title={missingLunch ? `Missing lunch: ${missingLunch.length} team${missingLunch.length !== 1 ? 's' : ''}` : undefined}
-                className={`text-base font-medium rounded px-1.5 -mx-1.5 ${isToday ? "text-blue-600" : "text-gray-800"} ${missingLunch ? "ring-2 ring-amber-400" : ""}`}
-              >
-                {fmtDayLabel(date)}
-              </span>
-            );
-          })()}
-          {isToday && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
-          {activeHighlights.has('lunch') && lunchMissingByDate.get(dayKey) && (
-            <AlertTriangle size={13} className="text-amber-500" />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setDatePickerOpen(o => !o)}
+            className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            aria-haspopup="dialog"
+            aria-expanded={datePickerOpen}
+          >
+            {(() => {
+              const missingLunch = activeHighlights.has('lunch') ? lunchMissingByDate.get(dayKey) : undefined;
+              return (
+                <span
+                  title={missingLunch ? `Missing lunch: ${missingLunch.length} team${missingLunch.length !== 1 ? 's' : ''}` : undefined}
+                  className={`text-base font-medium rounded px-1.5 -mx-1.5 ${isToday ? "text-blue-600" : "text-gray-800"} ${missingLunch ? "ring-2 ring-amber-400" : ""}`}
+                >
+                  {fmtDayLabel(date)}
+                </span>
+              );
+            })()}
+            {isToday && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+            {activeHighlights.has('lunch') && lunchMissingByDate.get(dayKey) && (
+              <AlertTriangle size={13} className="text-amber-500" />
+            )}
+            <ChevronDown size={15} className={`text-gray-400 transition-transform ${datePickerOpen ? "rotate-180" : ""}`} />
+          </button>
+          {datePickerOpen && (
+            <MiniDatePicker
+              selectedDate={date}
+              align="center"
+              onPick={(iso) => { onJumpToDate(iso); setDatePickerOpen(false); }}
+              onClose={() => setDatePickerOpen(false)}
+            />
           )}
-          {/* Hidden native date input — no longer relied on for hit-testing (its
-              own rendered control is much narrower than the label, which is why
-              only the rightmost sliver used to respond to taps). The wrapping
-              div now owns the click and opens it via showPicker(); this stays
-              pointer-events-none so it never intercepts the tap itself. */}
-          <input
-            ref={dateInputRef}
-            type="date"
-            value={dayKey}
-            onChange={(e) => { if (e.target.value) onJumpToDate(e.target.value); }}
-            className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
-            tabIndex={-1}
-            aria-hidden="true"
-          />
         </div>
         <button onClick={() => onNavigateDay(1)} className="p-2 rounded-full hover:bg-gray-100 active:bg-gray-200 text-gray-500" aria-label="Next day">
           <ChevronRight size={20} />
@@ -4084,6 +4217,8 @@ type ViewMode = "month" | "week" | "day";
 export default function AdminCalendarPage() {
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(() => startOfWeek(new Date()));
+  // LAB422: date-picker popover abierto desde el label de período.
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // ── Mobile day view ──
   // Below 768px, the calendar always shows a single day regardless of the
@@ -4091,7 +4226,7 @@ export default function AdminCalendarPage() {
   // actually gets rendered/fetched; `view` is preserved so the user's
   // month/week choice comes back untouched when they resize back up.
   const isMobile = useIsMobile();
-  const [dayAnchor, setDayAnchor] = useState<Date>(() => new Date(todayVan()));
+  const [dayAnchor, setDayAnchor] = useState<Date>(() => new Date(`${todayVan()}T00:00:00`));
   const effectiveView: ViewMode = isMobile ? "day" : view;
 
   // ── Focus mode ──
@@ -4421,7 +4556,10 @@ export default function AdminCalendarPage() {
     if (view === "month") setAnchor(a => addMonths(a, dir)); else setAnchor(a => addWeeks(a, dir));
   }
   function goToday() {
-    const t = new Date(todayVan());
+    // `new Date("YYYY-MM-DD")` es medianoche UTC → para un browser al oeste de
+    // UTC (Vancouver) cae en el día anterior. El resto de la fecha-matemática
+    // de esta página trabaja en hora local (igual criterio que jumpToDate).
+    const t = new Date(`${todayVan()}T00:00:00`);
     if (effectiveView === "day") { setDayAnchor(t); setTeamHeaderDate(isoDate(t)); return; }
     setAnchor(view === "month" ? startOfMonth(t) : startOfWeek(t)); setTeamHeaderDate(isoDate(t));
   }
@@ -4588,7 +4726,26 @@ export default function AdminCalendarPage() {
             </div>
 
             {/* Period label — hidden in Day view (any width): DayView's own header shows the focused date */}
-            <h2 className={`${effectiveView === "day" ? "hidden" : "hidden md:block"} text-xl font-normal text-gray-700 min-w-[240px]`}>{label}</h2>
+            <div className={`${effectiveView === "day" ? "hidden" : "hidden md:block"} relative min-w-[240px]`}>
+              <button
+                type="button"
+                onClick={() => setDatePickerOpen(o => !o)}
+                className="flex items-center gap-1.5 text-xl font-normal text-gray-700 rounded-lg px-2 -mx-2 py-0.5 hover:bg-gray-100 transition-colors"
+                aria-haspopup="dialog"
+                aria-expanded={datePickerOpen}
+              >
+                {label}
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${datePickerOpen ? "rotate-180" : ""}`} />
+              </button>
+              {datePickerOpen && (
+                <MiniDatePicker
+                  selectedDate={new Date(`${teamHeaderDate}T00:00:00`)}
+                  align="left"
+                  onPick={(iso) => { jumpToDate(iso); setDatePickerOpen(false); }}
+                  onClose={() => setDatePickerOpen(false)}
+                />
+              )}
+            </div>
 
             <GlobalSearchBar onSelectEvent={handleSelectSearchEvent} onSelectClient={handleSelectSearchClient} />
 
