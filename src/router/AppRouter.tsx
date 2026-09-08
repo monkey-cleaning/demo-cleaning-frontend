@@ -24,6 +24,10 @@ import AdminCalendarPage from '../pages/AdminCalendarPage';
 import AdminClientsPage from '../pages/AdminClientPage';
 import AdminStaffPage from '../pages/AdminStaffPage';
 import AdminSettingsPage from '../pages/AdminSettingsPage';
+import StaffLoginPage from '../pages/StaffLoginPage';
+import StaffHomePage from '../pages/StaffHomePage';
+import StaffCalendarPage from '../pages/StaffCalendarPage';
+import RequireStaff from '../components/staff/RequireStaff';
 import NotFoundPage from '../pages/NotFoundPage';
 
 export default function AppRouter() {
@@ -58,6 +62,26 @@ export default function AppRouter() {
       <Route path="/admin/staff" element={<AdminStaffPage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
       <Route path="/admin" element={<AdminDashboardPage />} />
+
+      {/* Staff (cleaners) — LAB423: calendario de solo lectura; LAB425: home
+          con horas/hoy/licencias/reclamos, landing tras el login */}
+      <Route path="/staff/login" element={<StaffLoginPage />} />
+      <Route
+        path="/staff"
+        element={
+          <RequireStaff>
+            <StaffHomePage />
+          </RequireStaff>
+        }
+      />
+      <Route
+        path="/staff/calendar"
+        element={
+          <RequireStaff>
+            <StaffCalendarPage />
+          </RequireStaff>
+        }
+      />
 
       <Route
         path="/admin/blogs"
