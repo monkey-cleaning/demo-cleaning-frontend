@@ -24,6 +24,7 @@ import AdminCalendarPage from '../pages/AdminCalendarPage';
 import AdminClientsPage from '../pages/AdminClientPage';
 import AdminStaffPage from '../pages/AdminStaffPage';
 import AdminSettingsPage from '../pages/AdminSettingsPage';
+import AdminActivityPage from '../pages/AdminActivityPage';
 import StaffLoginPage from '../pages/StaffLoginPage';
 import StaffHomePage from '../pages/StaffHomePage';
 import StaffCalendarPage from '../pages/StaffCalendarPage';
@@ -61,6 +62,7 @@ export default function AppRouter() {
       <Route path="/admin/clients" element={<AdminClientsPage />} />
       <Route path="/admin/staff" element={<AdminStaffPage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
+      <Route path="/admin/activity" element={<AdminActivityPage />} />
       <Route path="/admin" element={<AdminDashboardPage />} />
 
       {/* Staff (cleaners) — LAB423: calendario de solo lectura; LAB425: home

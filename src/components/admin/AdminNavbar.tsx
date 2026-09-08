@@ -26,6 +26,7 @@ import {
   CreditCard,
   FileText,
   LayoutDashboard,
+  History,
 } from 'lucide-react';
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Staff',     to: '/admin/staff',    icon: Users },
   { label: 'Payments',  to: '/admin/payments', icon: CreditCard },
   { label: 'Invoices',  to: '/admin/invoices', icon: FileText },
+  { label: 'Activity',  to: '/admin/activity', icon: History },
   { label: 'Settings',  to: '/admin/settings', icon: Settings2 },
 ];
 
