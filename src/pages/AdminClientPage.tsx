@@ -42,7 +42,7 @@ interface Appointment {
 
 interface ClientHistoryResponse {
   appointments: Appointment[];
-  stats: { totalServices: number; estimatedSpend: number; completedCount: number };
+  stats: { totalServices: number; estimatedSpend: number; upcomingCount: number };
 }
 
 interface Invoice {
@@ -521,8 +521,8 @@ function ClientDrawer({
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <CheckCircle2 size={14} className="text-emerald-500 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-[#031634]">{stats.completedCount}</p>
-                  <p className="text-xs text-gray-400">Completed</p>
+                  <p className="text-lg font-bold text-[#031634]">{stats.upcomingCount}</p>
+                  <p className="text-xs text-gray-400">Upcoming</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <DollarSign size={14} className="text-gray-400 mx-auto mb-1" />
