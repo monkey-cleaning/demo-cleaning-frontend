@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useRef, useMemo, forwardRef } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo, forwardRef } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen, History as HistoryIcon } from "lucide-react";
+import HistoryDrawer from "../components/admin/HistoryDrawer";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -243,6 +244,18 @@ async function apiDeleteEvent(id: string, scope: "single" | "following" | "all" 
     method: "DELETE", headers: authHeaders(),
   });
   if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
+}
+
+// Notas que un cleaner dejó sobre este evento/serie desde el staff calendar
+// (ver eventNotesController.js), solo lectura acá.
+interface EventNote { id: string; body: string; author_name: string; created_at: string; }
+async function apiFetchEventNotes(seriesKey: string): Promise<EventNote[]> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/notes?seriesKey=${encodeURIComponent(seriesKey)}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.notes as EventNote[]) ?? [];
 }
 
 async function apiFetchEmployee(id: string): Promise<{ id: string; name: string; availability?: unknown[]; time_off?: unknown[]; extra_availability?: unknown[] }> {
@@ -2706,7 +2719,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
   }
 
   return (
-    <div ref={boxRef} className="relative w-full max-w-xs">
+    <div ref={boxRef} className="relative w-full">
       <div className="relative">
         <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
@@ -2724,7 +2737,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
       </div>
 
       {showDropdown && (
-        <div className="absolute z-[80] mt-1 w-full min-w-[320px] bg-white rounded-xl shadow-lg border border-gray-100 max-h-96 overflow-y-auto">
+        <div className="absolute z-[80] mt-1 w-full min-w-[240px] max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-lg border border-gray-100 max-h-96 overflow-y-auto">
           {loading && (
             <div className="px-4 py-3 text-xs text-gray-400 flex items-center gap-2">
               <Loader2 size={13} className="animate-spin" /> Searching…
@@ -2789,7 +2802,18 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [scopeChoiceForDelete, setScopeChoiceForDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const isMobile = useIsMobile();
+
+  // Notas del cleaner ("para el próximo que le toque esta casa"), agrupadas
+  // server-side por seriesId (o el propio id si es un evento suelto). Solo
+  // lectura acá; se escriben desde el staff calendar.
+  const [notes, setNotes] = useState<EventNote[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiFetchEventNotes(event.seriesId || event.id).then((n) => { if (!cancelled) setNotes(n); });
+    return () => { cancelled = true; };
+  }, [event.id, event.seriesId]);
 
   useEffect(() => {
     function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
@@ -2851,6 +2875,8 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         <button onClick={() => { onAssign(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Assign team"><Users size={15} /></button>
         {/* LAB309: opens NewEvent prefilled with this event's data, date/time left blank */}
         <button onClick={() => { onDuplicate(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Duplicate"><Copy size={15} /></button>
+        {/* LAB418 — event.id ES el appointments.id en este fork (mapRow) */}
+        <button onClick={() => setShowHistory(true)} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Change history"><HistoryIcon size={15} /></button>
         {confirmDelete ? (
           <div className="flex items-center gap-1 ml-1">
             <button onClick={() => handleDelete()} disabled={deleting} className="text-xs font-medium py-1 px-2.5 rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors">
@@ -2863,6 +2889,15 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         )}
         <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors ml-1"><X size={15} /></button>
       </div>
+
+      {showHistory && (
+        <HistoryDrawer
+          entityType="appointment"
+          entityId={event.id}
+          title={event.summary}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
 
       {scopeChoiceForDelete && (
         <RecurrenceScopeModal
@@ -2906,6 +2941,23 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
             <div className="flex items-start gap-3">
               <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">📝</span>
               <p className="text-xs text-gray-500 line-clamp-4 whitespace-pre-line">{stripClientIdLine(htmlToPlainText(event.description))}</p>
+            </div>
+          )}
+
+          {notes && notes.length > 0 && (
+            <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
+              <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">🧹</span>
+              <div className="space-y-1.5 min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Cleaner notes</p>
+                {notes.map((n) => (
+                  <div key={n.id} className="text-xs text-gray-600">
+                    <p className="whitespace-pre-line">{n.body}</p>
+                    <p className="text-[10px] text-gray-400">
+                      {n.author_name} · {new Date(n.created_at).toLocaleDateString("en-CA")}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -3031,10 +3083,14 @@ function MonthView({ anchor, events, conflictByEventId, spotlightEventId, onCell
 
 // ── Week view layout ──────────────────────────────────────────────────────────
 
-const HOUR_H = 60; // px per hour
+const HOUR_H = 60; // px per hour — WeekView's fixed scale; DayView scales this by its own pinch-zoom factor (see MIN_ZOOM/MAX_ZOOM)
 const START_H = 0;
 const END_H = 24;
 const VISIBLE_HOURS = END_H - START_H;
+// Pinch-to-zoom range for DayView's hour grid on mobile (mirrors
+// StaffCalendarPage's Day view, MIN_ZOOM/MAX_ZOOM there).
+const DAY_MIN_ZOOM = 0.5;
+const DAY_MAX_ZOOM = 2.5;
 
 interface LayoutEvent {
   event: CalEvent;
@@ -3127,7 +3183,7 @@ function assignExpandingColumns(evs: CalEvent[], effectiveEnd: (ev: CalEvent) =>
 //    resolved with the SAME expanding-column algorithm, nested one level
 //    deeper — so no event is ever hidden behind another; each gets its own
 //    dedicated slice, as wide as it can be.
-function layoutDayEvents(events: CalEvent[], teamOrder: string[]): LayoutEvent[] {
+function layoutDayEvents(events: CalEvent[], teamOrder: string[], hourPx: number = HOUR_H): LayoutEvent[] {
   function effectiveEnd(ev: CalEvent) { return ev.endHour < ev.startHour ? 24 : ev.endHour; }
   function macroKey(ev: CalEvent): string | null { return ev.teamId ?? null; }
 
@@ -3212,8 +3268,8 @@ function layoutDayEvents(events: CalEvent[], teamOrder: string[]): LayoutEvent[]
         for (const ev of run) {
           const { col, span: colSpan, total } = colInfo.get(ev)!;
           const eEnd = effectiveEnd(ev);
-          const top = (Math.max(ev.startHour, START_H) - START_H) * HOUR_H;
-          const height = Math.max((Math.min(eEnd, END_H) - Math.max(ev.startHour, START_H)) * HOUR_H - 1, 22);
+          const top = (Math.max(ev.startHour, START_H) - START_H) * hourPx;
+          const height = Math.max((Math.min(eEnd, END_H) - Math.max(ev.startHour, START_H)) * hourPx - 1, 22);
           const laneWidthPct = box.width / total;
           results.push({
             event: ev, top, height, sub: col,
@@ -3241,9 +3297,9 @@ const TOUCH_MOVE_TOLERANCE_PX = 10;
 // the target day's column), snapped to the current 15-min slot — not a free
 // box following the raw cursor position. `hour` is already snapped by the
 // caller. Renders a translucent, dashed-border block with a live time label.
-function DragPreviewBlock({ event, hour }: { event: CalEvent; hour: number }) {
-  const top = (hour - START_H) * HOUR_H;
-  const height = Math.max(event.durationH * HOUR_H - 1, 22);
+function DragPreviewBlock({ event, hour, hourPx = HOUR_H }: { event: CalEvent; hour: number; hourPx?: number }) {
+  const top = (hour - START_H) * hourPx;
+  const height = Math.max(event.durationH * hourPx - 1, 22);
   const showTime = height > 30;
   const textColor = contrastColor(event.color);
   return (
@@ -3429,7 +3485,7 @@ function WeekEvent({ event, top, height, leftPct, widthPct, sub, highlightColor,
 
 // ── CurrentTimeLine ───────────────────────────────────────────────────────────
 
-function CurrentTimeLine() {
+function CurrentTimeLine({ hourPx = HOUR_H }: { hourPx?: number }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(t); }, []);
 
@@ -3438,7 +3494,7 @@ function CurrentTimeLine() {
   const h = vanNow.hour + vanNow.minute / 60;
 
   if (h < START_H || h > END_H) return null;
-  const top = (h - START_H) * HOUR_H;
+  const top = (h - START_H) * hourPx;
   return (
     <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: top - 1 }}>
       <div className="flex items-center">
@@ -3451,7 +3507,7 @@ function CurrentTimeLine() {
 
 // ── DayColumn ─────────────────────────────────────────────────────────────────
 
-function DayColumn({ laid, isToday, isSelected, date, scrollRef, activeHighlights, conflictByEventId, spotlightEventId, draggedEventId, ghost, openPopoverId, setOpenPopoverId, frontEventId, onBringToFront, onCellClick, onEdit, onDelete, onAssign, onDuplicate, onDragStart }: {
+function DayColumn({ laid, isToday, isSelected, date, scrollRef, activeHighlights, conflictByEventId, spotlightEventId, draggedEventId, ghost, openPopoverId, setOpenPopoverId, frontEventId, onBringToFront, onCellClick, onEdit, onDelete, onAssign, onDuplicate, onDragStart, hourPx = HOUR_H }: {
   laid: LayoutEvent[]; isToday: boolean; isSelected: boolean; date: Date;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   activeHighlights: Set<ConflictType>;
@@ -3467,12 +3523,15 @@ function DayColumn({ laid, isToday, isSelected, date, scrollRef, activeHighlight
   draggedEventId?: string | null;
   // snapped drop-preview to render in THIS column, if it's the current drop target's day
   ghost?: { hour: number; event: CalEvent } | null;
+  // px per hour — defaults to WeekView's fixed HOUR_H; DayView passes its own
+  // pinch-zoomed value (see DayView's `zoom` state below).
+  hourPx?: number;
 }) {
   function clientYToHour(clientY: number): number {
     const scrollEl = scrollRef.current;
     const containerTop = scrollEl ? scrollEl.getBoundingClientRect().top : 0;
     const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
-    return START_H + (clientY - containerTop + scrollTop) / HOUR_H;
+    return START_H + (clientY - containerTop + scrollTop) / hourPx;
   }
 
   function handleColumnClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -3491,23 +3550,23 @@ function DayColumn({ laid, isToday, isSelected, date, scrollRef, activeHighlight
   return (
     <div
       className="relative border-l border-gray-200"
-      style={{ height: `${VISIBLE_HOURS * HOUR_H}px` }}
+      style={{ height: `${VISIBLE_HOURS * hourPx}px` }}
       onClick={handleColumnClick}
     >
       {/* Hour lines */}
       {Array.from({ length: VISIBLE_HOURS }, (_, i) => (
-        <div key={i} className="absolute w-full border-t border-gray-200" style={{ top: `${i * HOUR_H}px` }} />
+        <div key={i} className="absolute w-full border-t border-gray-200" style={{ top: `${i * hourPx}px` }} />
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: VISIBLE_HOURS }, (_, i) => (
-        <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: `${i * HOUR_H + HOUR_H / 2}px` }} />
+        <div key={`h-${i}`} className="absolute w-full border-t border-gray-100" style={{ top: `${i * hourPx + hourPx / 2}px` }} />
       ))}
       {/* Today highlight */}
       {isToday && <div className="absolute inset-0 bg-blue-50/30 pointer-events-none" />}
       {/* Selected day highlight — subtler than today's, and only when it isn't also today */}
       {isSelected && !isToday && <div className="absolute inset-0 bg-gray-50/60 pointer-events-none" />}
       {/* Current time line — only in today column */}
-      {isToday && <CurrentTimeLine />}
+      {isToday && <CurrentTimeLine hourPx={hourPx} />}
       {/* Events */}
       {laid.map(({ event: e, leftPct, widthPct, top, height, sub }) => {
         const info = conflictByEventId.get(e.id);
@@ -3525,7 +3584,7 @@ function DayColumn({ laid, isToday, isSelected, date, scrollRef, activeHighlight
         );
       })}
       {/* GCal-style drop preview — snapped to the grid, updates in 15min steps */}
-      {ghost && <DragPreviewBlock event={ghost.event} hour={ghost.hour} />}
+      {ghost && <DragPreviewBlock event={ghost.event} hour={ghost.hour} hourPx={hourPx} />}
     </div>
   );
 }
@@ -3772,6 +3831,145 @@ function WeekView({ anchor, events, draggedEvent, dragGrabOffsetPx, activeHighli
 
 const SWIPE_THRESHOLD_PX = 60;
 
+// ── MiniDatePicker ────────────────────────────────────────────────────────────
+// LAB422 (portado de Monkey Cleaning): popover que se abre desde el label de
+// período en la barra superior y desde el header de DayView. Navegar de semana
+// en semana hasta otro mes/año era engorroso — acá el admin elige día/mes/año
+// directo y el calendario salta a esa fecha (jumpToDate).
+const MONTH_NAMES_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function MiniDatePicker({ selectedDate, onPick, onClose, align = "left" }: {
+  selectedDate: Date;
+  onPick: (iso: string) => void;
+  onClose: () => void;
+  align?: "left" | "center";
+}) {
+  const [mode, setMode] = useState<"days" | "months">("days");
+  const [viewMonth, setViewMonth] = useState<Date>(() => startOfMonth(selectedDate));
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const selectedKey = isoDate(selectedDate);
+  const todayStr = todayVan();
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  const cells = useMemo(() => {
+    const first = startOfMonth(viewMonth);
+    const gridStart = new Date(first);
+    gridStart.setDate(first.getDate() - first.getDay());
+    const out: Date[] = [];
+    const cur = new Date(gridStart);
+    while (out.length < 42) { out.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+    return out;
+  }, [viewMonth]);
+
+  const btn = "flex items-center justify-center rounded-lg text-sm transition-colors";
+
+  return (
+    <div
+      ref={wrapRef}
+      className={`absolute top-full mt-2 z-50 w-[288px] rounded-xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-3 ${
+        align === "center" ? "left-1/2 -translate-x-1/2" : "left-0"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => setMode(m => (m === "days" ? "months" : "days"))}
+          className="px-2 py-1 rounded-lg text-sm font-medium text-gray-800 hover:bg-gray-100 transition-colors"
+        >
+          {mode === "days" ? fmtMonthYear(viewMonth) : viewMonth.getFullYear()}
+        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setViewMonth(d => (mode === "days" ? addMonths(d, -1) : new Date(d.getFullYear() - 1, d.getMonth(), 1)))}
+            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            aria-label={mode === "days" ? "Previous month" : "Previous year"}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={() => setViewMonth(d => (mode === "days" ? addMonths(d, 1) : new Date(d.getFullYear() + 1, d.getMonth(), 1)))}
+            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+            aria-label={mode === "days" ? "Next month" : "Next year"}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {mode === "days" ? (
+        <>
+          <div className="grid grid-cols-7 mb-1">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <div key={i} className="text-center text-[11px] font-medium text-gray-400 py-1">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {cells.map((cell, i) => {
+              const key = isoDate(cell);
+              const inMonth = cell.getMonth() === viewMonth.getMonth();
+              const isToday = key === todayStr;
+              const isSelected = key === selectedKey;
+              return (
+                <button
+                  key={i}
+                  onClick={() => onPick(key)}
+                  className={`${btn} h-9 w-9 mx-auto ${
+                    isSelected
+                      ? "bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                      : isToday
+                        ? "text-blue-600 font-semibold hover:bg-gray-100"
+                        : inMonth
+                          ? "text-gray-800 hover:bg-gray-100"
+                          : "text-gray-300 hover:bg-gray-100"
+                  }`}
+                >
+                  {cell.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-3 gap-1.5 py-1">
+          {MONTH_NAMES_SHORT.map((m, i) => {
+            const isCurrent = viewMonth.getFullYear() === selectedDate.getFullYear() && i === selectedDate.getMonth();
+            return (
+              <button
+                key={m}
+                onClick={() => { setViewMonth(new Date(viewMonth.getFullYear(), i, 1)); setMode("days"); }}
+                className={`${btn} h-10 ${isCurrent ? "bg-blue-600 text-white font-semibold hover:bg-blue-700" : "text-gray-700 hover:bg-gray-100"}`}
+              >
+                {m}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-2 pt-2 border-t border-gray-100 flex justify-end">
+        <button
+          onClick={() => onPick(todayStr)}
+          className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        >
+          Today
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DayView({ date, events, activeHighlights, conflictByEventId, spotlightEventId, lunchMissingByDate, teamOrder, draggedEvent, dragGrabOffsetPx, onCellClick, onEdit, onDelete, onAssign, onDuplicate, onNavigateDay, onJumpToDate, onDragStart, onMouseUpDrop }: {
   date: Date; events: CalEvent[];
   activeHighlights: Set<ConflictType>;
@@ -3793,16 +3991,134 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
   const dayKey = isoDate(date);
   const isToday = dayKey === todayVan();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  // LAB422: date-picker popover del header (misma estética que la barra desktop).
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   const [frontEventId, setFrontEventId] = useState<string | null>(null);
   // Live, grid-snapped drop preview — day is fixed in this view, only the hour moves.
   const [dragPreviewHour, setDragPreviewHour] = useState<number | null>(null);
   const GUTTER_W = 56;
 
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 7 * HOUR_H; }, [dayKey]);
+  // Pinch-to-zoom on the hour grid, mirroring StaffCalendarPage's Day view
+  // (same MIN/MAX range, same anchor-under-the-fingers technique). WeekView
+  // keeps the fixed HOUR_H (never zoomed) — only this view's own `hourPx`
+  // scales with `zoom`, threaded down into layoutDayEvents/DayColumn.
+  const [zoom, setZoom] = useState(1);
+  const hourPx = HOUR_H * zoom;
 
-  const laid = useMemo(() => layoutDayEvents(events.filter(e => e.startDate === dayKey), teamOrder), [events, dayKey, teamOrder]);
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 7 * hourPx; }, [dayKey]);
+
+  const laid = useMemo(() => layoutDayEvents(events.filter(e => e.startDate === dayKey), teamOrder, hourPx), [events, dayKey, teamOrder, hourPx]);
+
+  // `zoomRef` always holds the last applied zoom so the native touch/gesture
+  // handlers below (set up once in a plain closure) read a fresh value
+  // instead of whatever `zoom` was when the effect was set up. `pendingAnchorRef`
+  // hands the target scroll anchor to a useLayoutEffect keyed on `zoom`, which
+  // runs after the DOM reflects the new grid height but before paint — applying
+  // the scrollTop compensation in the same tick as setZoom() would still see
+  // the OLD (unreflowed) scrollHeight and get clamped back down.
+  const zoomRef = useRef(zoom);
+  const pendingAnchorRef = useRef<{ anchorHour: number; viewportY: number } | null>(null);
+  useLayoutEffect(() => {
+    zoomRef.current = zoom;
+    const pending = pendingAnchorRef.current;
+    if (pending && scrollRef.current) {
+      scrollRef.current.scrollTop = pending.anchorHour * HOUR_H * zoom - pending.viewportY;
+      pendingAnchorRef.current = null;
+    }
+  }, [zoom]);
+
+  // `pinchRef` tracks per-gesture bookkeeping to turn each new touch/gesture
+  // event into an INCREMENTAL zoom step: `lastDist` for the touch path,
+  // `lastScale` for Safari's (whose GestureEvent.scale is cumulative since
+  // gesturestart, not incremental, so it needs dividing out each frame).
+  const pinchRef = useRef<{ lastDist?: number; lastScale?: number } | null>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    function dist(t: TouchList) {
+      const [a, b] = [t[0], t[1]];
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+    // `midClientY` is re-read from the CURRENT touches/gesture every frame
+    // (not just at gesture start) so the anchor stays glued to wherever the
+    // fingers currently are as a pinch progresses.
+    function applyZoom(targetZoom: number, midClientY: number) {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const viewportY = midClientY - rect.top;
+      const anchorHour = (el.scrollTop + viewportY) / (HOUR_H * zoomRef.current);
+      const clamped = Math.min(DAY_MAX_ZOOM, Math.max(DAY_MIN_ZOOM, targetZoom));
+      if (clamped === zoomRef.current) {
+        // Already at the cap and still being pinched past it: no re-render is
+        // coming, so apply the scrollTop compensation immediately instead of
+        // going through setZoom() (which would bail out on the same value and
+        // never run the layout effect that normally does this).
+        el.scrollTop = anchorHour * HOUR_H * clamped - viewportY;
+        return;
+      }
+      pendingAnchorRef.current = { anchorHour, viewportY };
+      setZoom(clamped);
+    }
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        pinchRef.current = { lastDist: dist(e.touches) };
+      }
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (e.touches.length === 2 && pinchRef.current?.lastDist) {
+        e.preventDefault();
+        const d = dist(e.touches);
+        const ratio = d / pinchRef.current.lastDist;
+        pinchRef.current.lastDist = d;
+        const [a, b] = [e.touches[0], e.touches[1]];
+        applyZoom(zoomRef.current * ratio, (a.clientY + b.clientY) / 2);
+      }
+    }
+    function onTouchEnd(e: TouchEvent) {
+      if (e.touches.length < 2) pinchRef.current = null;
+    }
+    // Safari-only (TS doesn't know these — cast to unknown Event handlers).
+    function onGestureStart(e: Event) {
+      e.preventDefault();
+      pinchRef.current = { lastScale: 1 };
+    }
+    function onGestureChange(e: Event) {
+      e.preventDefault();
+      if (!pinchRef.current) return;
+      const ge = e as unknown as { scale: number; clientY: number };
+      const ratio = ge.scale / (pinchRef.current.lastScale ?? 1);
+      pinchRef.current.lastScale = ge.scale;
+      applyZoom(zoomRef.current * ratio, ge.clientY);
+    }
+    function onGestureEnd(e: Event) {
+      e.preventDefault();
+      pinchRef.current = null;
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
+    el.addEventListener("gesturestart", onGestureStart as EventListener);
+    el.addEventListener("gesturechange", onGestureChange as EventListener);
+    el.addEventListener("gestureend", onGestureEnd as EventListener);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+      el.removeEventListener("gesturestart", onGestureStart as EventListener);
+      el.removeEventListener("gesturechange", onGestureChange as EventListener);
+      el.removeEventListener("gestureend", onGestureEnd as EventListener);
+    };
+    // zoom is read through zoomRef (always current), not as a direct
+    // dependency — re-subscribing on every zoom tick would drop an
+    // in-progress gesture. Re-attaches if the scroll element itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayKey]);
 
   // ── Swipe gesture ──
   // Tracks the active touch and, once the gesture is clearly more horizontal
@@ -3819,6 +4135,13 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
 
   function handleTouchStart(e: React.TouchEvent) {
     if (animating) return;
+    // A 2-finger touch is the pinch-zoom gesture (handled natively on
+    // scrollRef above) — leave it alone entirely so it doesn't also get read
+    // as a 1-finger swipe-to-navigate off touches[0].
+    if (e.touches.length !== 1) {
+      touch.current.ignore = true;
+      return;
+    }
     const target = e.target as HTMLElement;
     // Starting on an event chip no longer opts out of swipe-to-navigate — a
     // quick horizontal drag over an event changes day just like empty space.
@@ -3835,7 +4158,7 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
     touch.current = { startX: t.clientX, startY: t.clientY, dx: 0, horizontal: false, ignore: false };
   }
   function handleTouchMove(e: React.TouchEvent) {
-    if (animating || touch.current.ignore || isDragging) return;
+    if (animating || touch.current.ignore || isDragging || e.touches.length !== 1) return;
     const t = e.touches[0];
     const dx = t.clientX - touch.current.startX;
     const dy = t.clientY - touch.current.startY;
@@ -3876,7 +4199,7 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
     const el = scrollRef.current;
     const top = el ? el.getBoundingClientRect().top : 0;
     const scrollTop = el ? el.scrollTop : 0;
-    const hour = START_H + (clientY - top + scrollTop) / HOUR_H;
+    const hour = START_H + (clientY - top + scrollTop) / hourPx;
     return Math.round(hour * 4) / 4;
   }
   // Same grab-offset + 15min snap math as the final drop, shared by both the
@@ -3892,7 +4215,7 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
   // scroll further, computing an even bigger hour next tick, and so on. Capping
   // the hour here keeps the ghost inside the real 24h grid and breaks that loop.
   function computePreviewHour(clientY: number): number {
-    const rawHour = resolveDropHour(clientY) - dragGrabOffsetPx / HOUR_H;
+    const rawHour = resolveDropHour(clientY) - dragGrabOffsetPx / hourPx;
     const snapped = Math.round(rawHour * 4) / 4;
     const maxHour = END_H - (draggedEvent?.durationH ?? 0);
     return Math.min(Math.max(snapped, START_H), Math.max(START_H, maxHour));
@@ -3953,7 +4276,7 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
         // Don't auto-scroll up past 5am on touch — going all the way to midnight
         // overshoots what's actually useful for rescheduling with a thumb. Mouse
         // drags scroll all the way to 0, matching WeekView's desktop behavior.
-        const minScrollTop = inputType.current === "touch" ? DRAG_AUTOSCROLL_MIN_HOUR * HOUR_H : 0;
+        const minScrollTop = inputType.current === "touch" ? DRAG_AUTOSCROLL_MIN_HOUR * hourPx : 0;
         el.scrollTop = Math.max(minScrollTop, el.scrollTop - speed);
       } else if (y > rect.bottom - DRAG_EDGE_ZONE) {
         const dist = Math.max(0, y - (rect.bottom - DRAG_EDGE_ZONE));
@@ -3977,57 +4300,50 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
     document.addEventListener("mouseup", handleMouseUp);
     return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, dayKey, dragGrabOffsetPx]);
+  }, [isDragging, dayKey, dragGrabOffsetPx, hourPx]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col">
       {/* Date header — tap arrows or swipe the grid below to change day;
-          tap the date itself to jump to any date via the native picker. */}
-      <div className="flex items-center justify-between px-2 py-2 border-b border-gray-200 bg-white flex-shrink-0 sticky top-0 z-10">
+          tap the date itself to open the date-picker (LAB422) y saltar a
+          cualquier día/mes/año. */}
+      <div className="flex items-center justify-between px-2 py-2 border-b border-gray-200 bg-white flex-shrink-0 sticky top-0 z-20">
         <button onClick={() => onNavigateDay(-1)} className="p-2 rounded-full hover:bg-gray-100 active:bg-gray-200 text-gray-500" aria-label="Previous day">
           <ChevronLeft size={20} />
         </button>
-        <div
-          className="relative flex items-center gap-2 px-2 py-1 rounded-lg active:bg-gray-100 cursor-pointer"
-          onClick={() => {
-            const el = dateInputRef.current;
-            if (!el) return;
-            // showPicker() opens the OS picker programmatically from anywhere in
-            // the tap target; falls back to .click() on browsers that lack it.
-            if (typeof (el as any).showPicker === "function") (el as any).showPicker();
-            else el.click();
-          }}
-        >
-          {/* Solo se pinta con el banner "Lunch coverage" activo — mismo criterio que WeekView. */}
-          {(() => {
-            const missingLunch = activeHighlights.has('lunch') ? lunchMissingByDate.get(dayKey) : undefined;
-            return (
-              <span
-                title={missingLunch ? `Missing lunch: ${missingLunch.length} team${missingLunch.length !== 1 ? 's' : ''}` : undefined}
-                className={`text-base font-medium rounded px-1.5 -mx-1.5 ${isToday ? "text-blue-600" : "text-gray-800"} ${missingLunch ? "ring-2 ring-amber-400" : ""}`}
-              >
-                {fmtDayLabel(date)}
-              </span>
-            );
-          })()}
-          {isToday && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
-          {activeHighlights.has('lunch') && lunchMissingByDate.get(dayKey) && (
-            <AlertTriangle size={13} className="text-amber-500" />
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setDatePickerOpen(o => !o)}
+            className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            aria-haspopup="dialog"
+            aria-expanded={datePickerOpen}
+          >
+            {(() => {
+              const missingLunch = activeHighlights.has('lunch') ? lunchMissingByDate.get(dayKey) : undefined;
+              return (
+                <span
+                  title={missingLunch ? `Missing lunch: ${missingLunch.length} team${missingLunch.length !== 1 ? 's' : ''}` : undefined}
+                  className={`text-base font-medium rounded px-1.5 -mx-1.5 ${isToday ? "text-blue-600" : "text-gray-800"} ${missingLunch ? "ring-2 ring-amber-400" : ""}`}
+                >
+                  {fmtDayLabel(date)}
+                </span>
+              );
+            })()}
+            {isToday && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+            {activeHighlights.has('lunch') && lunchMissingByDate.get(dayKey) && (
+              <AlertTriangle size={13} className="text-amber-500" />
+            )}
+            <ChevronDown size={15} className={`text-gray-400 transition-transform ${datePickerOpen ? "rotate-180" : ""}`} />
+          </button>
+          {datePickerOpen && (
+            <MiniDatePicker
+              selectedDate={date}
+              align="center"
+              onPick={(iso) => { onJumpToDate(iso); setDatePickerOpen(false); }}
+              onClose={() => setDatePickerOpen(false)}
+            />
           )}
-          {/* Hidden native date input — no longer relied on for hit-testing (its
-              own rendered control is much narrower than the label, which is why
-              only the rightmost sliver used to respond to taps). The wrapping
-              div now owns the click and opens it via showPicker(); this stays
-              pointer-events-none so it never intercepts the tap itself. */}
-          <input
-            ref={dateInputRef}
-            type="date"
-            value={dayKey}
-            onChange={(e) => { if (e.target.value) onJumpToDate(e.target.value); }}
-            className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
-            tabIndex={-1}
-            aria-hidden="true"
-          />
         </div>
         <button onClick={() => onNavigateDay(1)} className="p-2 rounded-full hover:bg-gray-100 active:bg-gray-200 text-gray-500" aria-label="Next day">
           <ChevronRight size={20} />
@@ -4052,10 +4368,10 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
           }}
         >
           <div className="grid" style={{ gridTemplateColumns: `${GUTTER_W}px 1fr` }}>
-            <div className="relative border-r border-gray-200" style={{ height: `${VISIBLE_HOURS * HOUR_H}px` }}>
+            <div className="relative border-r border-gray-200" style={{ height: `${VISIBLE_HOURS * hourPx}px` }}>
               {Array.from({ length: VISIBLE_HOURS }, (_, i) => (
                 i > 0 && (
-                  <div key={i} className="absolute w-full pr-2 text-right" style={{ top: `${i * HOUR_H - 8}px` }}>
+                  <div key={i} className="absolute w-full pr-2 text-right" style={{ top: `${i * hourPx - 8}px` }}>
                     <span className="text-[11px] text-gray-400 leading-none whitespace-nowrap">{fmtTime(START_H + i)}</span>
                   </div>
                 )
@@ -4069,7 +4385,7 @@ function DayView({ date, events, activeHighlights, conflictByEventId, spotlightE
               openPopoverId={openPopoverId} setOpenPopoverId={setOpenPopoverId}
               frontEventId={frontEventId} onBringToFront={setFrontEventId}
               onCellClick={onCellClick} onEdit={onEdit} onDelete={onDelete} onAssign={onAssign} onDuplicate={onDuplicate}
-              onDragStart={onDragStart} />
+              onDragStart={onDragStart} hourPx={hourPx} />
           </div>
         </div>
       </div>
@@ -4084,6 +4400,8 @@ type ViewMode = "month" | "week" | "day";
 export default function AdminCalendarPage() {
   const [view, setView] = useState<ViewMode>("week");
   const [anchor, setAnchor] = useState<Date>(() => startOfWeek(new Date()));
+  // LAB422: date-picker popover abierto desde el label de período.
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // ── Mobile day view ──
   // Below 768px, the calendar always shows a single day regardless of the
@@ -4091,7 +4409,7 @@ export default function AdminCalendarPage() {
   // actually gets rendered/fetched; `view` is preserved so the user's
   // month/week choice comes back untouched when they resize back up.
   const isMobile = useIsMobile();
-  const [dayAnchor, setDayAnchor] = useState<Date>(() => new Date(todayVan()));
+  const [dayAnchor, setDayAnchor] = useState<Date>(() => new Date(`${todayVan()}T00:00:00`));
   const effectiveView: ViewMode = isMobile ? "day" : view;
 
   // ── Focus mode ──
@@ -4421,7 +4739,10 @@ export default function AdminCalendarPage() {
     if (view === "month") setAnchor(a => addMonths(a, dir)); else setAnchor(a => addWeeks(a, dir));
   }
   function goToday() {
-    const t = new Date(todayVan());
+    // `new Date("YYYY-MM-DD")` es medianoche UTC → para un browser al oeste de
+    // UTC (Vancouver) cae en el día anterior. El resto de la fecha-matemática
+    // de esta página trabaja en hora local (igual criterio que jumpToDate).
+    const t = new Date(`${todayVan()}T00:00:00`);
     if (effectiveView === "day") { setDayAnchor(t); setTeamHeaderDate(isoDate(t)); return; }
     setAnchor(view === "month" ? startOfMonth(t) : startOfWeek(t)); setTeamHeaderDate(isoDate(t));
   }
@@ -4563,36 +4884,93 @@ export default function AdminCalendarPage() {
           />
         )}
 
-        {/* ── Google-style top bar ── */}
+        {/* ── Google-style top bar ──
+            Single row (h-16) only from lg (1024px) up — below that (phones AND
+            tablets) it wraps freely with auto height instead of clipping/
+            overflowing off-screen. The search bar and the mobile-only view
+            switcher are each `w-full` below sm, which — inside a wrapping
+            flex row — always forces them onto their own line. */}
         <div className="flex-shrink-0 border-b border-gray-200 bg-white">
-          <div className="flex items-center gap-4 px-4 h-16">
+          {/* `lg:min-h-16`, not a fixed `lg:h-16` — a "laptop" width just past
+              the lg breakpoint (~1024–1300px) still doesn't have room for
+              every item in one row, so it wraps onto a second line. A FIXED
+              height doesn't grow for that wrapped content — it just overflows
+              the box and visually spills into whatever renders below (the
+              conflict banners) instead of pushing them down. A min-height
+              still gives the common single-row case its normal 64px, but lets
+              a wrapped two-line case grow the box instead. */}
+          <div className="flex flex-wrap items-center gap-2 lg:gap-4 px-3 lg:px-4 py-2 lg:py-2.5 lg:min-h-16">
 
             {/* Logo / title */}
-            <div className="flex items-center gap-2 min-w-[180px]">
-              <div className="w-8 h-8 rounded-lg bg-[#031634] flex items-center justify-center">
+            <div className="flex items-center gap-2 flex-shrink-0 lg:min-w-[180px]">
+              <div className="w-8 h-8 rounded-lg bg-[#031634] flex items-center justify-center flex-shrink-0">
                 <Calendar size={15} className="text-white" />
               </div>
-              <span className="text-lg font-normal text-gray-700 tracking-tight">Calendar</span>
+              <span className="text-base lg:text-lg font-normal text-gray-700 tracking-tight">Calendar</span>
             </div>
 
-            {/* Today + Nav — chevrons hidden on mobile: DayView has its own prev/next + swipe */}
-            <div className="flex items-center gap-1">
+            {/* Today + Nav — chevrons hidden only in Day view: DayView has its own prev/next + swipe */}
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={goToday}
-                className="px-3.5 py-1.5 text-sm font-medium border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-2.5 lg:px-3.5 py-1.5 text-sm font-medium border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Today
               </button>
-              <button onClick={() => navigate(-1)} className={`${effectiveView === "day" ? "hidden" : "hidden md:inline-flex"} p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors`}><ChevronLeft size={18} /></button>
-              <button onClick={() => navigate(1)} className={`${effectiveView === "day" ? "hidden" : "hidden md:inline-flex"} p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors`}><ChevronRight size={18} /></button>
+              <button onClick={() => navigate(-1)} className={`${effectiveView === "day" ? "hidden" : "inline-flex"} p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors`}><ChevronLeft size={18} /></button>
+              <button onClick={() => navigate(1)} className={`${effectiveView === "day" ? "hidden" : "inline-flex"} p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors`}><ChevronRight size={18} /></button>
             </div>
 
-            {/* Period label — hidden in Day view (any width): DayView's own header shows the focused date */}
-            <h2 className={`${effectiveView === "day" ? "hidden" : "hidden md:block"} text-xl font-normal text-gray-700 min-w-[240px]`}>{label}</h2>
+            {/* Period label — hidden in Day view (any width): DayView's own header shows the focused date.
+                Visible at every width now (used to be `hidden md:block`, which left mobile Month view
+                with no page label and no way to jump to another month/year via the picker). */}
+            <div className={`${effectiveView === "day" ? "hidden" : "block"} relative min-w-0 max-w-full lg:min-w-[240px]`}>
+              <button
+                type="button"
+                onClick={() => setDatePickerOpen(o => !o)}
+                className="flex items-center gap-1.5 text-base lg:text-xl font-normal text-gray-700 rounded-lg px-2 -mx-2 py-0.5 hover:bg-gray-100 transition-colors max-w-full"
+                aria-haspopup="dialog"
+                aria-expanded={datePickerOpen}
+              >
+                <span className="truncate">{label}</span>
+                <ChevronDown size={16} className={`flex-shrink-0 text-gray-400 transition-transform ${datePickerOpen ? "rotate-180" : ""}`} />
+              </button>
+              {datePickerOpen && (
+                <MiniDatePicker
+                  selectedDate={new Date(`${teamHeaderDate}T00:00:00`)}
+                  align="left"
+                  onPick={(iso) => { jumpToDate(iso); setDatePickerOpen(false); }}
+                  onClose={() => setDatePickerOpen(false)}
+                />
+              )}
+            </div>
 
-            <GlobalSearchBar onSelectEvent={handleSelectSearchEvent} onSelectClient={handleSelectSearchClient} />
+            {/* Focus mode — hides navbar/banners/team header for more grid space */}
+            <button
+              onClick={() => setFocusMode(v => !v)}
+              title={focusMode ? "Show top bars" : "Focus mode: hide top bars for more space"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-full transition-colors flex-shrink-0 ${focusMode
+                ? "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                }`}
+            >
+              {focusMode ? <PanelTopOpen size={15} /> : <PanelTopClose size={15} />}
+              <span className="hidden lg:inline">{focusMode ? "Show bars" : "Focus mode"}</span>
+            </button>
 
-            <div className="flex-1" />
+            {/* View switcher — Month/Week/Day only apply at desktop widths; mobile always shows Day view */}
+            <div className="hidden sm:flex items-center border border-gray-300 rounded-lg overflow-hidden text-sm flex-shrink-0">
+              <button onClick={() => switchView("month")} className={`px-3 lg:px-4 py-1.5 transition-colors font-medium ${view === "month" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}>Month</button>
+              <button onClick={() => switchView("week")} className={`px-3 lg:px-4 py-1.5 border-l border-gray-300 transition-colors font-medium ${view === "week" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}>Week</button>
+              <button onClick={() => switchView("day")} className={`px-3 lg:px-4 py-1.5 border-l border-gray-300 transition-colors font-medium ${view === "day" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}>Day</button>
+            </div>
+
+            {/* Search bar — full width of its own row below sm (see wrap note above),
+                grows with the row from sm up instead of a fixed max-w-xs (too
+                narrow at tablet widths). */}
+            <div className="w-full sm:w-auto sm:flex-1 sm:min-w-[160px] sm:max-w-sm order-1 sm:order-none">
+              <GlobalSearchBar onSelectEvent={handleSelectSearchEvent} onSelectClient={handleSelectSearchClient} />
+            </div>
 
             {viewingClient && (
               <ClientFormModal
@@ -4611,43 +4989,23 @@ export default function AdminCalendarPage() {
               </div>
             )}
 
-            <div className="flex-1" />
+            <div className="hidden lg:block flex-1" />
 
-            {/* Focus mode — hides navbar/banners/team header for more grid space */}
-            <button
-              onClick={() => setFocusMode(v => !v)}
-              title={focusMode ? "Show top bars" : "Focus mode: hide top bars for more space"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-full transition-colors ${focusMode
-                ? "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-            >
-              {focusMode ? <PanelTopOpen size={15} /> : <PanelTopClose size={15} />}
-              <span className="hidden lg:inline">{focusMode ? "Show bars" : "Focus mode"}</span>
-            </button>
-
-            {/* View switcher — Month/Week/Day only apply at desktop widths; mobile always shows Day view */}
-            <div className="hidden md:flex items-center border border-gray-300 rounded-lg overflow-hidden text-sm">
-              <button onClick={() => switchView("month")} className={`px-4 py-1.5 transition-colors font-medium ${view === "month" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}>Month</button>
-              <button onClick={() => switchView("week")} className={`px-4 py-1.5 border-l border-gray-300 transition-colors font-medium ${view === "week" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}>Week</button>
-              <button onClick={() => switchView("day")} className={`px-4 py-1.5 border-l border-gray-300 transition-colors font-medium ${view === "day" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}>Day</button>
-            </div>
-
-            {/* Create buttons */}
-            <div className="flex items-center gap-2">
+            {/* Create buttons — full width, side by side, below sm */}
+            <div className="flex items-center gap-2 w-full sm:w-auto order-3 sm:order-none ml-0 lg:ml-auto">
               <button
                 onClick={() => setCreatingStart(new Date().toISOString())}
-                className="flex items-center gap-2 pl-3 pr-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
+                className="flex flex-1 sm:flex-initial items-center justify-center gap-1.5 pl-3 pr-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
               >
-                <Plus size={16} /> <span className="hidden sm:inline">New event</span>
+                <Plus size={16} /> Event
               </button>
 
               {/* NEW: Add Lunch button */}
               <button
                 onClick={() => setCreatingLunch(true)}
-                className="flex items-center gap-2 pl-3 pr-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
+                className="flex flex-1 sm:flex-initial items-center justify-center gap-1.5 pl-3 pr-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
               >
-                <Plus size={16} /> <span className="hidden sm:inline">Add Lunch</span>
+                <Plus size={16} /> Lunch
               </button>
             </div>
           </div>
@@ -4663,7 +5021,11 @@ export default function AdminCalendarPage() {
               </div>
             )}
             {!focusMode && Object.values(bannerCounts).some(c => c > 0) && (
-              <div className="flex gap-1.5">
+              // Each banner is a full-width row below sm (a narrow flex-1 slice
+              // used to squeeze "16 events" and "Schedule conflict" onto two
+              // separate lines instead of side by side); from sm up they share
+              // a row again since there's room for the count+label to stay inline.
+              <div className="flex flex-col sm:flex-row gap-1.5">
                 {BANNER_DEFS.map(({ type, label, severe }) => {
                   const count = bannerCounts[type];
                   if (count === 0) return null;
@@ -4673,16 +5035,16 @@ export default function AdminCalendarPage() {
                       key={type}
                       onClick={() => severe ? setResolvingType(type) : toggleHighlight(type)}
                       title={severe ? 'Click to review suggested fixes' : undefined}
-                      className={`flex-1 min-w-0 text-left px-3 py-2 rounded-xl border text-xs flex items-center gap-2 transition-colors ${severe
+                      className={`sm:flex-1 min-w-0 text-left px-3 py-2 rounded-xl border text-xs flex items-center gap-2 transition-colors ${severe
                         ? 'bg-red-100 border-red-400 text-red-800 hover:bg-red-200 cursor-pointer'
                         : isActive ? 'bg-amber-100 border-amber-400 text-amber-800' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
                         }`
                       }
                     >
                       <AlertTriangle size={13} className={`flex-shrink-0 ${severe ? 'text-red-500' : 'text-amber-500'}`} />
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">
                         <span className="font-semibold">{count} event{count !== 1 ? 's' : ''}</span>
-                        <span className="opacity-75 ml-1 truncate">{label}</span>
+                        <span className="opacity-75 ml-1">{label}</span>
                       </div>
                       {severe ? <span className="text-[10px] font-semibold flex-shrink-0 underline">Resolve →</span>
                         : isActive && <span className="text-[10px] opacity-60 flex-shrink-0">✓</span>}
@@ -4706,14 +5068,17 @@ export default function AdminCalendarPage() {
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Team header — shows Team 1 / Team 2 assignment for the focused date */}
           {!focusMode && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            // items-start, not items-center: at tablet widths TeamHeader can wrap
+            // onto several lines (see TeamHeader.tsx) — centering this button
+            // against that taller block looked adrift, top-aligned reads better.
+            <div className="flex items-start gap-2 flex-shrink-0">
               <div className="flex-1 min-w-0">
                 <TeamHeader date={teamHeaderDate} refreshKey={teamHeaderRefreshKey} />
               </div>
               {!isMobile && view === "week" && (
                 <button
                   onClick={() => setShowAutoAssign(true)}
-                  className="flex-shrink-0 mr-3 text-xs font-medium text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                  className="flex-shrink-0 mt-1.5 mr-3 text-xs font-medium text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
                 >
                   Auto-assign teams
                 </button>

@@ -8,9 +8,11 @@ import {
   CalendarPlus, CheckCircle2, DollarSign, ClipboardList,
   FileSpreadsheet,
   FileText,
+  History as HistoryIcon,
 } from "lucide-react";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
+import HistoryDrawer from "../components/admin/HistoryDrawer";
 import {
   ClientFormModal,
   clientDisplayName,
@@ -42,7 +44,7 @@ interface Appointment {
 
 interface ClientHistoryResponse {
   appointments: Appointment[];
-  stats: { totalServices: number; estimatedSpend: number; completedCount: number };
+  stats: { totalServices: number; estimatedSpend: number; upcomingCount: number };
 }
 
 interface Invoice {
@@ -361,6 +363,9 @@ function ClientDrawer({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
+  // LAB418 — audit trail (record_history), distinto del "historial de servicios"
+  // de abajo (appointments pasados del cliente).
+  const [showAuditHistory, setShowAuditHistory] = useState(false);
 
   // History state
   const [history, setHistory] = useState<Appointment[]>([]);
@@ -502,10 +507,25 @@ function ClientDrawer({
               </button>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors flex-shrink-0">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => setShowAuditHistory(true)} title="Change history"
+              className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
+              <HistoryIcon size={16} />
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
+              <X size={16} />
+            </button>
+          </div>
         </div>
+
+        {showAuditHistory && (
+          <HistoryDrawer
+            entityType="client"
+            entityId={client.id}
+            title={clientDisplayName(client)}
+            onClose={() => setShowAuditHistory(false)}
+          />
+        )}
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
@@ -521,8 +541,8 @@ function ClientDrawer({
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <CheckCircle2 size={14} className="text-emerald-500 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-[#031634]">{stats.completedCount}</p>
-                  <p className="text-xs text-gray-400">Completed</p>
+                  <p className="text-lg font-bold text-[#031634]">{stats.upcomingCount}</p>
+                  <p className="text-xs text-gray-400">Upcoming</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <DollarSign size={14} className="text-gray-400 mx-auto mb-1" />
@@ -906,6 +926,8 @@ export default function AdminClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [schedulingClient, setSchedulingClient] = useState<Client | null>(null);
+  // LAB418 — atajo de historial a nivel fila (sin abrir el drawer completo).
+  const [historyClient, setHistoryClient] = useState<Client | null>(null);
   const [openedFromContact, setOpenedFromContact] = useState(false);
 
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1221,6 +1243,11 @@ export default function AdminClientsPage() {
                               className="p-1.5 rounded-lg text-gray-400 hover:text-[#031634] hover:bg-gray-100 transition-colors">
                               <Pencil size={13} />
                             </button>
+                            <button onClick={() => setHistoryClient(c)}
+                              title="Change history"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-[#031634] hover:bg-gray-100 transition-colors">
+                              <HistoryIcon size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1315,6 +1342,15 @@ export default function AdminClientsPage() {
           }}
           onExport={handleExport}
           exportingKey={exportingKey}
+        />
+      )}
+
+      {historyClient && (
+        <HistoryDrawer
+          entityType="client"
+          entityId={historyClient.id}
+          title={clientDisplayName(historyClient)}
+          onClose={() => setHistoryClient(null)}
         />
       )}
 

@@ -1,0 +1,47 @@
+/* ─── Staff (cleaner) accessibility overrides ────────────────────────────────
+   LAB423 — same rules as styles/admin-a11y.css, replicated here scoped under
+   `.staff-scope` instead of `.admin-scope`. Kept as a separate file on
+   purpose rather than reusing `.admin-scope` on staff pages: the two
+   audiences are unrelated (cleaners are not admins), and a future
+   admin-only tweak to admin-a11y.css shouldn't silently change the staff
+   view too. If you change one file for a real accessibility fix, check
+   whether the other needs the same fix.
+
+   WHY THIS APPROACH: Tailwind's text-* utilities use rem, and rem is always
+   relative to the <html> root font-size, not the nearest ancestor. Wrapping
+   the staff view in a div with a bigger font-size does nothing on its own —
+   these rules override the utility classes directly, scoped to
+   `.staff-scope`, so every existing text-xs/text-sm/etc. bumps up
+   automatically without touching each component.
+
+   Do NOT use `zoom` or `transform: scale()` here — StaffCalendarPage's
+   week/day grid positions events with exact pixel math (HOUR_H) that assumes
+   an unscaled box model; scaling the whole subtree risks subpixel drift.
+─────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Font size: roughly a "12 → 14 in Word" bump across the board ── */
+.staff-scope .text-\[9px\]  { font-size: 10px; }
+.staff-scope .text-\[10px\] { font-size: 11px; }
+.staff-scope .text-\[11px\] { font-size: 13px; }
+
+.staff-scope .text-xs   { font-size: 0.8125rem; line-height: 1.15rem; } /* 12px → 13px */
+.staff-scope .text-sm   { font-size: 0.9375rem; line-height: 1.4rem;  } /* 14px → 15px */
+.staff-scope .text-base { font-size: 1.0625rem; line-height: 1.6rem;  } /* 16px → 17px */
+.staff-scope .text-lg   { font-size: 1.1875rem; line-height: 1.7rem;  } /* 18px → 19px */
+.staff-scope .text-xl   { font-size: 1.3125rem; line-height: 1.8rem;  } /* 20px → 21px */
+.staff-scope .text-2xl  { font-size: 1.5625rem; line-height: 2rem;    } /* 24px → 25px */
+.staff-scope .text-3xl  { font-size: 1.9375rem; line-height: 2.3rem;  } /* 30px → 31px */
+
+/* ── Contrast: gray-400 on white is ~2.8:1, under WCAG AA (4.5:1).
+   Bump to a value closer to gray-500/600 for real readability at low vision
+   — relevant here too (time gutter labels, empty-state hints). ── */
+.staff-scope .text-gray-400 { color: #6b7280; } /* was #9ca3af (gray-400) → gray-500 */
+
+/* ── Focus visibility: inputs (staff login) rely on a 1px border color
+   change on focus, easy to miss with low vision or screen magnification. ── */
+.staff-scope input:focus,
+.staff-scope select:focus,
+.staff-scope textarea:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.5); /* blue-500 @ 50% */
+  outline-offset: 1px;
+}

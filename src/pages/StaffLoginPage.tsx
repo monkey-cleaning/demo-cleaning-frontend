@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_BASE_URL } from '../api/client';
+import { STAFF_TOKEN_KEY } from '../api/staffClient';
+import '../styles/staff-a11y.css';
 
-export default function AdminLoginPage() {
+// LAB423 — calco de AdminLoginPage.tsx pero contra /api/staff/auth/login,
+// guardando el token bajo STAFF_TOKEN_KEY (no admin_blog_token), y en inglés
+// (a pedido — la vista de cleaners es English-only). "staff-scope" acá
+// también (a diferencia de AdminLoginPage, que no lo usa) — los inputs del
+// login se benefician igual del focus ring de staff-a11y.css.
+export default function StaffLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -15,48 +22,47 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/auth/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/staff/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(username ? { username, password } : { password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!res.ok) throw new Error('Login failed');
 
       const data = await res.json();
-      localStorage.setItem('admin_blog_token', data.token);
-      navigate('/admin/');
+      localStorage.setItem(STAFF_TOKEN_KEY, data.token);
+      navigate('/staff'); // LAB425 — home nueva; el calendario (LAB423) ahora es secundario
     } catch {
-      setError('Usuario o contraseña incorrectos');
+      setError('Incorrect username or password');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="staff-scope min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-xl shadow-md w-[320px] space-y-4"
+        className="bg-white p-8 rounded-xl shadow-md w-full max-w-[320px] space-y-4"
       >
         <h1 className="text-xl font-montserrat font-bold text-[#031634] text-center">
-          Admin Login
+          My Calendar
         </h1>
 
         <div>
-          <label className="block text-sm mb-1">Usuario</label>
+          <label className="block text-sm mb-1">Username</label>
           <input
             type="text"
             className="w-full border rounded-md px-3 py-2 text-sm"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="jhony, clara..."
             autoComplete="username"
           />
         </div>
 
         <div>
-          <label className="block text-sm mb-1">Contraseña</label>
+          <label className="block text-sm mb-1">Password</label>
           <input
             type="password"
             className="w-full border rounded-md px-3 py-2 text-sm"
@@ -73,7 +79,7 @@ export default function AdminLoginPage() {
           disabled={loading}
           className="w-full py-2 rounded-md bg-[#031634] text-white text-sm font-montserrat disabled:opacity-60"
         >
-          {loading ? 'Ingresando...' : 'Ingresar'}
+          {loading ? 'Signing in...' : 'Sign in'}
         </button>
 
         <p className="text-center text-xs">

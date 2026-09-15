@@ -24,6 +24,16 @@ import AdminCalendarPage from '../pages/AdminCalendarPage';
 import AdminClientsPage from '../pages/AdminClientPage';
 import AdminStaffPage from '../pages/AdminStaffPage';
 import AdminSettingsPage from '../pages/AdminSettingsPage';
+import AdminActivityPage from '../pages/AdminActivityPage';
+import AdminPayrollPage from '../pages/AdminPayrollPage';
+import StaffLoginPage from '../pages/StaffLoginPage';
+import StaffHomePage from '../pages/StaffHomePage';
+import StaffCalendarPage from '../pages/StaffCalendarPage';
+import StaffPayrollPage from '../pages/StaffPayrollPage';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/ResetPasswordPage';
+import SurveyPage from '../pages/SurveyPage';
+import RequireStaff from '../components/staff/RequireStaff';
 import NotFoundPage from '../pages/NotFoundPage';
 
 export default function AppRouter() {
@@ -49,6 +59,14 @@ export default function AppRouter() {
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/blog/:slug" element={<BlogPostDetailPage />} />
 
+      {/* Auth recovery — sin auth, compartido admin/staff */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Encuesta de satisfacción post-servicio (LAB413) — sin auth, llega
+          por email */}
+      <Route path="/survey/:token/:rating" element={<SurveyPage />} />
+
       {/* Admin */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin/invoices" element={<AdminInvoicesPage />} />
@@ -57,7 +75,37 @@ export default function AppRouter() {
       <Route path="/admin/clients" element={<AdminClientsPage />} />
       <Route path="/admin/staff" element={<AdminStaffPage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
+      <Route path="/admin/activity" element={<AdminActivityPage />} />
+      <Route path="/admin/payroll" element={<AdminPayrollPage />} />
       <Route path="/admin" element={<AdminDashboardPage />} />
+
+      {/* Staff (cleaners) — LAB423: calendario de solo lectura; LAB425: home
+          con horas/hoy/licencias/reclamos, landing tras el login */}
+      <Route path="/staff/login" element={<StaffLoginPage />} />
+      <Route
+        path="/staff"
+        element={
+          <RequireStaff>
+            <StaffHomePage />
+          </RequireStaff>
+        }
+      />
+      <Route
+        path="/staff/calendar"
+        element={
+          <RequireStaff>
+            <StaffCalendarPage />
+          </RequireStaff>
+        }
+      />
+      <Route
+        path="/staff/payroll"
+        element={
+          <RequireStaff>
+            <StaffPayrollPage />
+          </RequireStaff>
+        }
+      />
 
       <Route
         path="/admin/blogs"

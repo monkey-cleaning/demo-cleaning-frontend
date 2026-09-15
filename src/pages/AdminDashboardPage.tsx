@@ -143,6 +143,7 @@ function PeriodSelector({
   );
 }
 import { getPaymentsSummary, type PaymentsSummary } from '../api/payments';
+import WeeklyCashflowCard from '../components/admin/WeeklyCashflowCard';
 import { listInvoices, type Invoice } from '../api/invoices';
 import RequireAdmin from '../components/admin/RequireAdmin';
 import { useOperationalData } from '../hooks/useOperationalData';
@@ -468,6 +469,9 @@ export default function AdminDashboardPage() {
               />
             </div>
           </div>
+
+          {/* ── ROW 4b: Weekly cashflow (LAB367) ────────────────────────── */}
+          <WeeklyCashflowCard />
 
           {/* ── ROW 5: Revenue (2/3) + Overdue (1/3) ────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">

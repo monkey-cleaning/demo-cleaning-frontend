@@ -46,7 +46,19 @@ export interface PaymentsSummary {
   byMonth: { month: string; count: number; amount: number }[];
 }
 
+// LAB367 — cashflow semanal (facturado vs. pagado)
+export interface WeeklyCashflow {
+  week: { from: string; to: string };
+  invoiced: { amount: number; count: number };
+  paid: { amount: number; pct: number };
+  outstanding: { amount: number };
+  unreconciled: { amount: number; count: number };
+}
 
+export async function getWeeklyCashflow(params: { from: string; to: string }): Promise<WeeklyCashflow> {
+  const q = new URLSearchParams(params);
+  return api(`/api/payments/cashflow?${q.toString()}`);
+}
 
 export async function listPayments(params: {
   lead_id?: string;

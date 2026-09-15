@@ -306,31 +306,44 @@ function TeamSlot({
   const showMaleWarning = maleCount >= 2;
 
   return (
+    // Below lg (phone AND tablet — an iPad Pro 11" at 834px is well under the
+    // 1024px lg breakpoint), this stacks top-to-bottom: label row, one chip
+    // per line, Add pill on its own row at the bottom. The compact single-line,
+    // horizontal-scrolling bar below only had room to show a name or two
+    // before it got clipped, and there was no way to tell more names were
+    // hidden off to the side. `lg:flex-row` restores that compact bar once
+    // there's enough width (real desktop) to fit label + several chips +
+    // Add without needing to scroll.
     <div
-      className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg min-w-0"
+      className="flex-1 flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-2 px-3 py-1.5 rounded-lg min-w-0 w-full"
       style={{ borderLeft: `3px solid ${cfg.color}`, background: `${cfg.color}0d` }}
     >
-      {/* Team label */}
-      <span
-        className="text-[11px] font-semibold whitespace-nowrap flex-shrink-0"
-        style={{ color: cfg.color }}
-      >
-        {cfg.dotEmoji} {cfg.label}
-      </span>
-
-      {showMaleWarning && (
+      {/* Team label + male-warning icon — kept together so they don't get
+          separated when the chips below wrap onto their own lines. */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         <span
-          className="flex-shrink-0 text-amber-500"
-          title={`${maleCount} men on this team today — review composition`}
+          className="text-[11px] font-semibold whitespace-nowrap"
+          style={{ color: cfg.color }}
         >
-          <AlertTriangle size={12} />
+          {cfg.dotEmoji} {cfg.label}
         </span>
-      )}
 
-      <div className="w-px h-3 bg-gray-200 flex-shrink-0" />
+        {showMaleWarning && (
+          <span
+            className="flex-shrink-0 text-amber-500"
+            title={`${maleCount} men on this team today — review composition`}
+          >
+            <AlertTriangle size={12} />
+          </span>
+        )}
+      </div>
 
-      {/* Chips — scrollable */}
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 min-w-0">
+      <div className="hidden lg:block w-px h-3 bg-gray-200 flex-shrink-0" />
+
+      {/* Chips — one per line below lg (each name fully readable, no
+          clipping/scrolling), a single horizontally-scrolling line from lg up
+          (compact desktop bar). */}
+      <div className="flex flex-col lg:flex-row lg:flex-nowrap items-start lg:items-center gap-1 lg:overflow-x-auto scrollbar-none flex-1 min-w-0">
         {assignments.length === 0 ? (
           <span className="text-[11px] text-gray-400 italic whitespace-nowrap">
             No cleaners assigned
@@ -348,7 +361,7 @@ function TeamSlot({
         )}
       </div>
 
-      {/* Add button */}
+      {/* Add button — its own row below lg, trailing inline from lg up. */}
       <div className="flex-shrink-0">
         <AddCleanerSelect
           teamId={teamId}
@@ -460,7 +473,10 @@ export default function TeamHeader({ date, refreshKey }: TeamHeaderProps) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-shrink-0 border-b border-gray-100 bg-white px-3 py-1.5 flex items-center gap-2">
+    // `flex-wrap` — below sm the "Teams" label row and each team slot below
+    // it wrap onto their own lines (via the `w-full` on the slots container)
+    // instead of forcing everything onto one line that had no room for it.
+    <div className="flex-shrink-0 border-b border-gray-100 bg-white px-3 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
       {/* Label */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <Users size={12} className="text-gray-400" />
@@ -470,7 +486,7 @@ export default function TeamHeader({ date, refreshKey }: TeamHeaderProps) {
         <span className="text-[10px] text-gray-400">{dateLabel}</span>
       </div>
 
-      <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+      <div className="hidden sm:block w-px h-4 bg-gray-200 flex-shrink-0" />
 
       {/* Error */}
       {error && (
@@ -484,9 +500,10 @@ export default function TeamHeader({ date, refreshKey }: TeamHeaderProps) {
         <Loader2 size={13} className="animate-spin text-gray-400" />
       )}
 
-      {/* Team slots */}
+      {/* Team slots — stacked one-per-row below sm (see note above), side by
+          side from sm up (original compact bar). */}
       {!loading && !error && (
-        <div className="flex gap-2 flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 flex-1 min-w-0 w-full sm:w-auto basis-full sm:basis-auto">
           {teamOrder.map((tid) => (
             <TeamSlot
               key={tid}
