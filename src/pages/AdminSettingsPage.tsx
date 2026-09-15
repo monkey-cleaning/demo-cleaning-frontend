@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { startOfWeek, addWeeks, subDays, format } from "date-fns";
 import { RefreshCw, AlertCircle, History } from "lucide-react";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import AdminNavbar from '../components/admin/AdminNavbar';
@@ -25,6 +26,7 @@ interface Settings {
   confirmar_color_id: string;
   non_service_color_id: string;
   individual_color_id: string;
+  booking_blackout_weeks: string;
 }
 
 // GCAL colorId → hex mapping para visualización de colores.
@@ -79,6 +81,7 @@ const DEFAULTS: Settings = {
   confirmar_color_id: "5",
   non_service_color_id: "4",
   individual_color_id: "9",
+  booking_blackout_weeks: "0",
 };
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => String(h));
@@ -926,6 +929,28 @@ export default function AdminSettingsPage() {
                     endHour={parseInt(settings.work_end_hour, 10) || 19}
                   />
                 </Section>
+
+                {/* ── Section: Public booking ─────────────────────────────── */}
+                <Section
+                  title="Public Booking"
+                  description="Temporary controls for the client-facing quote and booking flow."
+                >
+                  <Field
+                    label="Block near-term bookings (weeks)"
+                    hint="Number of weeks — counting the current one — closed to online booking when there's no staff availability. 2 = this week and next week. Clients can't pick those dates, and the quote email asks them to reply with their preferred dates instead. Set back to 0 to lift the block."
+                  >
+                    <NumberInput
+                      value={settings.booking_blackout_weeks}
+                      min={0}
+                      max={8}
+                      onChange={(v) => handleChange("booking_blackout_weeks", v)}
+                    />
+                  </Field>
+
+                  <BookingBlackoutPreview
+                    weeks={parseInt(settings.booking_blackout_weeks, 10) || 0}
+                  />
+                </Section>
               </>
             )}
           </div>
@@ -1176,6 +1201,34 @@ function WorkWindowPreview({
         </span>
         <span>24:00</span>
       </div>
+    </div>
+  );
+}
+
+function BookingBlackoutPreview({ weeks }: { weeks: number }) {
+  if (!weeks || weeks < 1) {
+    return (
+      <div className="mx-6 mb-4 mt-1 p-3 bg-gray-50 rounded-xl border border-gray-100">
+        <p className="text-xs text-gray-400">
+          No block active — clients can book any available date.
+        </p>
+      </div>
+    );
+  }
+
+  // Mirror of the backend (settingsService.getBookingBlackout): Monday of the
+  // current ISO week + `weeks`. weekStartsOn: 1 = Monday, to match Luxon.
+  const earliest = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), weeks);
+  const lastBlocked = subDays(earliest, 1);
+
+  return (
+    <div className="mx-6 mb-4 mt-1 p-3 bg-amber-50 rounded-xl border border-amber-100">
+      <p className="text-xs text-amber-700">
+        Online booking is closed through{" "}
+        <strong>{format(lastBlocked, "EEEE, MMMM d")}</strong> — the first
+        bookable day is <strong>{format(earliest, "EEEE, MMMM d")}</strong>. This
+        window rolls forward with the calendar until you set it back to 0.
+      </p>
     </div>
   );
 }

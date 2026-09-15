@@ -129,6 +129,10 @@ export default function AvailablePage() {
   const [slots,   setSlots]   = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [err,     setErr]     = useState<string | null>(null);
+  // LAB427 — near-term booking blackout (no staff availability). When active,
+  // the backend has already stripped the blocked dates from `slots`; this just
+  // explains why the earliest dates are missing.
+  const [blackout, setBlackout] = useState<{ active: boolean; earliestDate?: string } | null>(null);
   const [_recaptchaLoaded, setRecaptchaLoaded] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -251,6 +255,8 @@ export default function AvailablePage() {
 
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || "Failed to load availability");
+
+      setBlackout(data.blackout ?? null);
 
       const fetchedSlots = data.slots || [];
       console.log(`[fetchSlots] received ${fetchedSlots.length} slots from backend (requiredHours=${data.requiredHours ?? "n/a"})`);
@@ -431,6 +437,21 @@ export default function AvailablePage() {
               </svg>
               <p>{err}</p>
             </div>
+          </div>
+        )}
+
+        {blackout?.active && (
+          <div className="mb-6 max-w-2xl mx-auto rounded-lg border border-amber-200 bg-amber-50 px-5 py-4 text-amber-800 shadow-sm">
+            <p className="font-medium">We'd love to get your home on our schedule!</p>
+            <p className="mt-1 text-sm">
+              Our calendar below shows the earliest dates we currently have available. We know
+              finding the right day and time isn't always easy, so if none of these options
+              work for you, don't worry!
+            </p>
+            <p className="mt-1 text-sm">
+              Simply reply to your quote email with the days and times that work best for you,
+              and we'll do our best to find a spot that works for your schedule.
+            </p>
           </div>
         )}
 
