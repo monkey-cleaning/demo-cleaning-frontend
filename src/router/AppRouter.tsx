@@ -25,9 +25,11 @@ import AdminClientsPage from '../pages/AdminClientPage';
 import AdminStaffPage from '../pages/AdminStaffPage';
 import AdminSettingsPage from '../pages/AdminSettingsPage';
 import AdminActivityPage from '../pages/AdminActivityPage';
+import AdminPayrollPage from '../pages/AdminPayrollPage';
 import StaffLoginPage from '../pages/StaffLoginPage';
 import StaffHomePage from '../pages/StaffHomePage';
 import StaffCalendarPage from '../pages/StaffCalendarPage';
+import StaffPayrollPage from '../pages/StaffPayrollPage';
 import RequireStaff from '../components/staff/RequireStaff';
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -63,6 +65,7 @@ export default function AppRouter() {
       <Route path="/admin/staff" element={<AdminStaffPage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
       <Route path="/admin/activity" element={<AdminActivityPage />} />
+      <Route path="/admin/payroll" element={<AdminPayrollPage />} />
       <Route path="/admin" element={<AdminDashboardPage />} />
 
       {/* Staff (cleaners) — LAB423: calendario de solo lectura; LAB425: home
@@ -81,6 +84,14 @@ export default function AppRouter() {
         element={
           <RequireStaff>
             <StaffCalendarPage />
+          </RequireStaff>
+        }
+      />
+      <Route
+        path="/staff/payroll"
+        element={
+          <RequireStaff>
+            <StaffPayrollPage />
           </RequireStaff>
         }
       />
