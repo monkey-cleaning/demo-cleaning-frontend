@@ -246,6 +246,18 @@ async function apiDeleteEvent(id: string, scope: "single" | "following" | "all" 
   if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
 }
 
+// Notas que un cleaner dejó sobre este evento/serie desde el staff calendar
+// (ver eventNotesController.js), solo lectura acá.
+interface EventNote { id: string; body: string; author_name: string; created_at: string; }
+async function apiFetchEventNotes(seriesKey: string): Promise<EventNote[]> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/notes?seriesKey=${encodeURIComponent(seriesKey)}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.notes as EventNote[]) ?? [];
+}
+
 async function apiFetchEmployee(id: string): Promise<{ id: string; name: string; availability?: unknown[]; time_off?: unknown[]; extra_availability?: unknown[] }> {
   const res = await fetch(`${API_BASE}/api/admin/staff/${id}`, { headers: authHeaders() });
   const data = await res.json();
@@ -2793,6 +2805,16 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
   const [showHistory, setShowHistory] = useState(false);
   const isMobile = useIsMobile();
 
+  // Notas del cleaner ("para el próximo que le toque esta casa"), agrupadas
+  // server-side por seriesId (o el propio id si es un evento suelto). Solo
+  // lectura acá; se escriben desde el staff calendar.
+  const [notes, setNotes] = useState<EventNote[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiFetchEventNotes(event.seriesId || event.id).then((n) => { if (!cancelled) setNotes(n); });
+    return () => { cancelled = true; };
+  }, [event.id, event.seriesId]);
+
   useEffect(() => {
     function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
     const t = setTimeout(() => document.addEventListener("mousedown", handler), 50);
@@ -2919,6 +2941,23 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
             <div className="flex items-start gap-3">
               <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">📝</span>
               <p className="text-xs text-gray-500 line-clamp-4 whitespace-pre-line">{stripClientIdLine(htmlToPlainText(event.description))}</p>
+            </div>
+          )}
+
+          {notes && notes.length > 0 && (
+            <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
+              <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">🧹</span>
+              <div className="space-y-1.5 min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Cleaner notes</p>
+                {notes.map((n) => (
+                  <div key={n.id} className="text-xs text-gray-600">
+                    <p className="whitespace-pre-line">{n.body}</p>
+                    <p className="text-[10px] text-gray-400">
+                      {n.author_name} · {new Date(n.created_at).toLocaleDateString("en-CA")}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
