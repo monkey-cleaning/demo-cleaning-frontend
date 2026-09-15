@@ -111,15 +111,18 @@ export default function AdminNavbar({
             <p className="text-gold text-xs font-semibold uppercase tracking-widest leading-none mb-0.5">
               {sectionLabel}
             </p>
-            <h1 className="text-lg sm:text-xl font-bold leading-tight">{title}</h1>
+            <h1 className="text-lg sm:text-xl font-bold leading-tight truncate">{title}</h1>
           </Link>
         </div>
 
         {/* ── Right: desktop nav + actions ────────────────────────────────── */}
         <div className="flex items-center gap-1 flex-shrink-0">
 
-          {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-0.5 mr-1" aria-label="Admin navigation">
+          {/* Desktop nav — kicks in at lg (1024px), not sm: at tablet widths
+              (768–1023px) the full text nav for 9 pages doesn't fit next to
+              the page title and used to overlap it — tablets get the
+              hamburger dropdown too. */}
+          <nav className="hidden lg:flex items-center gap-0.5 mr-1" aria-label="Admin navigation">
             {NAV_ITEMS.filter(n => n.label !== 'Dashboard').map(({ label, to }) => (
               <Link
                 key={to}
@@ -138,7 +141,7 @@ export default function AdminNavbar({
 
           {/* Page-specific right actions (desktop) */}
           {rightSlot && (
-            <div className="hidden sm:flex items-center gap-2 ml-1">
+            <div className="hidden lg:flex items-center gap-2 ml-1">
               {rightSlot}
             </div>
           )}
@@ -147,7 +150,7 @@ export default function AdminNavbar({
           <button
             onClick={() => setShowChangePassword(true)}
             title="My account"
-            className="hidden sm:inline-flex p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+            className="hidden lg:inline-flex p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
           >
             <KeyRound size={16} />
           </button>
@@ -156,7 +159,7 @@ export default function AdminNavbar({
           <button
             onClick={handleLogout}
             title="Log out"
-            className="hidden sm:inline-flex p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+            className="hidden lg:inline-flex p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
           >
             <LogOut size={16} />
           </button>
@@ -173,10 +176,10 @@ export default function AdminNavbar({
             </button>
           )}
 
-          {/* Mobile hamburger */}
+          {/* Hamburger — mobile AND tablet (<lg) */}
           <button
             onClick={() => setMenuOpen(v => !v)}
-            className="sm:hidden p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+            className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           >
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -184,9 +187,9 @@ export default function AdminNavbar({
         </div>
       </div>
 
-      {/* ── Mobile dropdown ─────────────────────────────────────────────────── */}
+      {/* ── Mobile/tablet dropdown ───────────────────────────────────────────── */}
       {menuOpen && (
-        <nav className="sm:hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-0.5" aria-label="Admin navigation mobile">
+        <nav className="lg:hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-0.5" aria-label="Admin navigation mobile">
           {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
             <Link
               key={to}
