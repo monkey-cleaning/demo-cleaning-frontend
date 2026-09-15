@@ -15,7 +15,7 @@
 // shared bar so the left side always reads consistently.
 
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu,
   X,
@@ -28,7 +28,10 @@ import {
   LayoutDashboard,
   History,
   DollarSign,
+  KeyRound,
+  LogOut,
 } from 'lucide-react';
+import AccountModal from './AccountModal';
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 
@@ -81,12 +84,21 @@ export default function AdminNavbar({
   rightSlot,
 }: AdminNavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   // Exact match for /admin, prefix match for everything else
   function isActive(to: string) {
     if (to === '/admin') return pathname === '/admin';
     return pathname.startsWith(to);
+  }
+
+  // Same token/route AdminLoginPage sets on sign-in and AccountModal already
+  // clears on a username change.
+  function handleLogout() {
+    localStorage.removeItem('admin_blog_token');
+    navigate('/admin/login');
   }
 
   return (
@@ -131,6 +143,24 @@ export default function AdminNavbar({
             </div>
           )}
 
+          {/* My account — always available, doesn't depend on onRefresh */}
+          <button
+            onClick={() => setShowChangePassword(true)}
+            title="My account"
+            className="hidden sm:inline-flex p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+          >
+            <KeyRound size={16} />
+          </button>
+
+          {/* Log out */}
+          <button
+            onClick={handleLogout}
+            title="Log out"
+            className="hidden sm:inline-flex p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+          >
+            <LogOut size={16} />
+          </button>
+
           {/* Refresh */}
           {onRefresh && (
             <button
@@ -174,6 +204,28 @@ export default function AdminNavbar({
             </Link>
           ))}
 
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              setShowChangePassword(true);
+            }}
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <KeyRound size={15} />
+            My account
+          </button>
+
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              handleLogout();
+            }}
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <LogOut size={15} />
+            Log out
+          </button>
+
           {/* Page-specific actions also exposed on mobile */}
           {rightSlot && (
             <div className="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
@@ -182,6 +234,8 @@ export default function AdminNavbar({
           )}
         </nav>
       )}
+
+      {showChangePassword && <AccountModal onClose={() => setShowChangePassword(false)} />}
     </div>
   );
 }

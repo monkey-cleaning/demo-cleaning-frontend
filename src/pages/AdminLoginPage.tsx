@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { API_BASE_URL } from '../api/client';
 
 export default function AdminLoginPage() {
@@ -75,6 +75,12 @@ export default function AdminLoginPage() {
         >
           {loading ? 'Ingresando...' : 'Ingresar'}
         </button>
+
+        <p className="text-center text-xs">
+          <Link to="/forgot-password" className="text-gray-400 underline">
+            Forgot your password?
+          </Link>
+        </p>
       </form>
     </div>
   );

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DateTime } from 'luxon';
-import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, DollarSign } from 'lucide-react';
+import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, DollarSign, KeyRound } from 'lucide-react';
 import { getStaffDayEvents, type StaffCalendarEvent } from '../api/staffCalendar';
 import { getStaffHoursSummary, type QuincenaPeriod, type StaffHoursSummary } from '../api/staffHours';
 import { STAFF_TOKEN_KEY } from '../api/staffClient';
 import TimeOffRequestModal from '../components/staff/TimeOffRequestModal';
 import ComplaintModal from '../components/staff/ComplaintModal';
+import AccountModal from '../components/staff/AccountModal';
 
 const TZ = 'America/Vancouver';
 
@@ -26,6 +27,7 @@ export default function StaffHomePage() {
 
   const [showTimeOff, setShowTimeOff] = useState(false);
   const [showComplaint, setShowComplaint] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   // Reset loading/error as soon as `period` changes, during render (not
   // inside the effect below) — same pattern as StaffCalendarPage, avoids the
@@ -175,7 +177,7 @@ export default function StaffHomePage() {
         </section>
 
         {/* ── Actions ──────────────────────────────────────────────────────── */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <button
             onClick={() => setShowTimeOff(true)}
             className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-medium text-[#031634] hover:bg-gray-50"
@@ -194,11 +196,18 @@ export default function StaffHomePage() {
           >
             <DollarSign size={16} /> Payroll
           </button>
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-medium text-[#031634] hover:bg-gray-50"
+          >
+            <KeyRound size={16} /> My account
+          </button>
         </section>
       </div>
 
       {showTimeOff && <TimeOffRequestModal onClose={() => setShowTimeOff(false)} />}
       {showComplaint && <ComplaintModal onClose={() => setShowComplaint(false)} />}
+      {showChangePassword && <AccountModal onClose={() => setShowChangePassword(false)} />}
     </div>
   );
 }

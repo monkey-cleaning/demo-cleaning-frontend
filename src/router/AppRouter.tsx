@@ -30,6 +30,8 @@ import StaffLoginPage from '../pages/StaffLoginPage';
 import StaffHomePage from '../pages/StaffHomePage';
 import StaffCalendarPage from '../pages/StaffCalendarPage';
 import StaffPayrollPage from '../pages/StaffPayrollPage';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/ResetPasswordPage';
 import RequireStaff from '../components/staff/RequireStaff';
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -55,6 +57,10 @@ export default function AppRouter() {
 
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/blog/:slug" element={<BlogPostDetailPage />} />
+
+      {/* Auth recovery — sin auth, compartido admin/staff */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Admin */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
