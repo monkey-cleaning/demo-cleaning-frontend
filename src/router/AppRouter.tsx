@@ -32,6 +32,7 @@ import StaffCalendarPage from '../pages/StaffCalendarPage';
 import StaffPayrollPage from '../pages/StaffPayrollPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
+import SurveyPage from '../pages/SurveyPage';
 import RequireStaff from '../components/staff/RequireStaff';
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -61,6 +62,10 @@ export default function AppRouter() {
       {/* Auth recovery — sin auth, compartido admin/staff */}
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Encuesta de satisfacción post-servicio (LAB413) — sin auth, llega
+          por email */}
+      <Route path="/survey/:token/:rating" element={<SurveyPage />} />
 
       {/* Admin */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
