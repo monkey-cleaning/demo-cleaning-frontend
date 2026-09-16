@@ -1,9 +1,15 @@
 import HeroSection from '../sections/Contact/HeroSection';
 import Footer from '../components/layout/Footer';
 import FormSection from '../sections/HomePage/FormSection';
-import { CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL } from '../config/brand';
+import { usePublicSiteSettings } from '../hooks/usePublicSiteSettings';
 
 export default function ContactPage() {
+  const { settings } = usePublicSiteSettings();
+  const telHref = `tel:+${settings.contact_phone.replace(/\D/g, '')}`;
+  const mapSrc = `https://maps.google.com/maps?q=${encodeURIComponent(
+    settings.contact_address
+  )}&z=15&output=embed`;
+
   return (
     <div className="min-h-screen max">
       <HeroSection />
@@ -19,10 +25,10 @@ export default function ContactPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
             <a
-              href={`tel:${CONTACT_PHONE_TEL}`}
+              href={telHref}
               className="text-gray-700 hover:text-[#031634] hover:underline transition-colors font-medium"
             >
-              Phone: {CONTACT_PHONE_DISPLAY}
+              Phone: {settings.contact_phone}
             </a>
           </div>
 
@@ -31,10 +37,10 @@ export default function ContactPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
             <a
-              href="mailto:joaquin.labtinos@gmail.com"
+              href={`mailto:${settings.contact_email}`}
               className="text-gray-700 hover:text-[#031634] hover:underline transition-colors font-medium"
             >
-              Email: joaquin.labtinos@gmail.com
+              Email: {settings.contact_email}
             </a>
           </div>
         </div>
@@ -46,7 +52,7 @@ export default function ContactPage() {
             className="rounded-lg shadow-lg"
             loading="lazy"
             allowFullScreen
-            src="https://maps.google.com/maps?q=1295%20Craigflower%20Rd,%20Victoria,%20BC%20V9A%200H7,%20Canada&z=15&output=embed"
+            src={mapSrc}
             title="Our Location"
           />
         </div>

@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import whatsappIcon from '../../assets/whatsapp.png';
 import PlaceholderImage from '../../components/PlaceholderImage';
-import { BRAND_NAME, whatsappUrl } from '../../config/brand';
+import { BRAND_NAME } from '../../config/brand';
+import { usePublicSiteSettings } from '../../hooks/usePublicSiteSettings';
 
 const STORAGE_KEY = 'demoCleaningFormData';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
-const WHATSAPP_URL = whatsappUrl(
-  `Hi! I'm interested in booking a cleaning service with ${BRAND_NAME}`
-);
+const WHATSAPP_MESSAGE = `Hi! I'm interested in booking a cleaning service with ${BRAND_NAME}`;
 
 
 interface FormSectionProps {
@@ -16,6 +15,10 @@ interface FormSectionProps {
 }
 
 export default function FormSection({ defaultFormType = 'general' }: FormSectionProps) {
+  const { settings: siteSettings } = usePublicSiteSettings();
+  const WHATSAPP_URL = `https://wa.me/${siteSettings.whatsapp_number}?text=${encodeURIComponent(
+    WHATSAPP_MESSAGE
+  )}`;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});

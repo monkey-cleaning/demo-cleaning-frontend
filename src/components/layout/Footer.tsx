@@ -5,10 +5,14 @@ import facebookIcon from '../../assets/facebook.png';
 import whatsappIcon from '../../assets/whatsappFooter.png';
 import mIcon from '../../assets/m.png';
 import iconoInput from '../../assets/iconoInput.png';
-import { BRAND_NAME, WHATSAPP_URL } from '../../config/brand';
+import { BRAND_NAME } from '../../config/brand';
+import { usePublicSiteSettings } from '../../hooks/usePublicSiteSettings';
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { settings: siteSettings } = usePublicSiteSettings();
+  const whatsappHref = `https://wa.me/${siteSettings.whatsapp_number}`;
+  const mailHref = `mailto:${siteSettings.contact_email}`;
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -89,18 +93,22 @@ export default function Footer() {
                   Follow Us
                 </p>
                 <div className="flex gap-[20px]">
-                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={whatsappIcon} alt="Whatsapp" className="w-[28px] h-[28px]" />
                   </a>
-                  <a href="mailto:joaquin.labtinos@gmail.com" className="w-[28px] h-[28px] hover:opacity-80">
+                  <a href={mailHref} className="w-[28px] h-[28px] hover:opacity-80">
                     <img src={mIcon} alt="Mail" className="w-[28px] h-[28px]" />
                   </a>
-                  <a href="#" className="w-[28px] h-[28px] hover:opacity-80">
-                    <img src={instagramIcon} alt="Instagram" className="w-[28px] h-[28px]" />
-                  </a>
-                  <a href="#" className="w-[28px] h-[28px] hover:opacity-80">
-                    <img src={facebookIcon} alt="Facebook" className="w-[28px] h-[28px]" />
-                  </a>
+                  {siteSettings.social_instagram_url && (
+                    <a href={siteSettings.social_instagram_url} target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
+                      <img src={instagramIcon} alt="Instagram" className="w-[28px] h-[28px]" />
+                    </a>
+                  )}
+                  {siteSettings.social_facebook_url && (
+                    <a href={siteSettings.social_facebook_url} target="_blank" rel="noopener noreferrer" className="w-[28px] h-[28px] hover:opacity-80">
+                      <img src={facebookIcon} alt="Facebook" className="w-[28px] h-[28px]" />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -196,18 +204,22 @@ export default function Footer() {
                   Follow Us
                 </p>
                 <div className="flex gap-[16px]">
-                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={whatsappIcon} alt="Whatsapp" className="w-[24px] h-[24px]" />
                   </a>
-                  <a href="mailto:joaquin.labtinos@gmail.com" className="w-[24px] h-[24px] hover:opacity-80">
+                  <a href={mailHref} className="w-[24px] h-[24px] hover:opacity-80">
                     <img src={mIcon} alt="Mail" className="w-[24px] h-[24px]" />
                   </a>
-                  <a href="#" className="w-[24px] h-[24px] hover:opacity-80">
-                    <img src={instagramIcon} alt="Instagram" className="w-[24px] h-[24px]" />
-                  </a>
-                  <a href="#" className="w-[24px] h-[24px] hover:opacity-80">
-                    <img src={facebookIcon} alt="Facebook" className="w-[24px] h-[24px]" />
-                  </a>
+                  {siteSettings.social_instagram_url && (
+                    <a href={siteSettings.social_instagram_url} target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
+                      <img src={instagramIcon} alt="Instagram" className="w-[24px] h-[24px]" />
+                    </a>
+                  )}
+                  {siteSettings.social_facebook_url && (
+                    <a href={siteSettings.social_facebook_url} target="_blank" rel="noopener noreferrer" className="w-[24px] h-[24px] hover:opacity-80">
+                      <img src={facebookIcon} alt="Facebook" className="w-[24px] h-[24px]" />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -330,18 +342,22 @@ export default function Footer() {
             Follow Us
           </p>
           <div className="flex gap-[25px]">
-            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={whatsappIcon} alt="Whatsapp" className="w-[32.26px] h-[32.26px]" />
             </a>
-            <a href="mailto:joaquin.labtinos@gmail.com" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+            <a href={mailHref} className="w-[32.26px] h-[32.26px] hover:opacity-80">
               <img src={mIcon} alt="Mail" className="w-[32.26px] h-[32.26px]" />
             </a>
-            <a href="#" className="w-[32.26px] h-[32.26px] hover:opacity-80">
-              <img src={instagramIcon} alt="Instagram" className="w-[32.26px] h-[32.26px]" />
-            </a>
-            <a href="#" className="w-[32.26px] h-[32.26px] hover:opacity-80">
-              <img src={facebookIcon} alt="Facebook" className="w-[32.26px] h-[32.26px]" />
-            </a>
+            {siteSettings.social_instagram_url && (
+              <a href={siteSettings.social_instagram_url} target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+                <img src={instagramIcon} alt="Instagram" className="w-[32.26px] h-[32.26px]" />
+              </a>
+            )}
+            {siteSettings.social_facebook_url && (
+              <a href={siteSettings.social_facebook_url} target="_blank" rel="noopener noreferrer" className="w-[32.26px] h-[32.26px] hover:opacity-80">
+                <img src={facebookIcon} alt="Facebook" className="w-[32.26px] h-[32.26px]" />
+              </a>
+            )}
           </div>
         </div>
 

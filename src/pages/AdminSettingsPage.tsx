@@ -27,6 +27,12 @@ interface Settings {
   non_service_color_id: string;
   individual_color_id: string;
   booking_blackout_weeks: string;
+  contact_phone: string;
+  contact_email: string;
+  contact_address: string;
+  whatsapp_number: string;
+  social_instagram_url: string;
+  social_facebook_url: string;
 }
 
 // GCAL colorId → hex mapping para visualización de colores.
@@ -82,6 +88,12 @@ const DEFAULTS: Settings = {
   non_service_color_id: "4",
   individual_color_id: "9",
   booking_blackout_weeks: "0",
+  contact_phone: "1 (604) 555-0142",
+  contact_email: "contact@democleaning.co",
+  contact_address: "123 Main St, Victoria, BC V9A 0H7, Canada",
+  whatsapp_number: "16045550142",
+  social_instagram_url: "",
+  social_facebook_url: "",
 };
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => String(h));
@@ -351,6 +363,31 @@ export default function AdminSettingsPage() {
     // hacer un round-trip inútil al servidor con un campo vacío
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.ops_alert_email)) {
       setError(`"Ops alert email" must be a valid email address.`);
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.contact_email)) {
+      setError(`"Contact email" must be a valid email address.`);
+      return;
+    }
+    if (!settings.contact_phone.trim()) {
+      setError(`"Contact phone" cannot be empty.`);
+      return;
+    }
+    if (!settings.contact_address.trim()) {
+      setError(`"Contact address" cannot be empty.`);
+      return;
+    }
+    if (!/^\d{7,15}$/.test(settings.whatsapp_number)) {
+      setError(`"WhatsApp number" must be digits only (7-15), including country code.`);
+      return;
+    }
+    if (settings.social_instagram_url && !/^https?:\/\/\S+$/i.test(settings.social_instagram_url)) {
+      setError(`"Instagram URL" must be an http(s) URL, or left empty to hide the icon.`);
+      return;
+    }
+    if (settings.social_facebook_url && !/^https?:\/\/\S+$/i.test(settings.social_facebook_url)) {
+      setError(`"Facebook URL" must be an http(s) URL, or left empty to hide the icon.`);
       return;
     }
 
@@ -951,6 +988,77 @@ export default function AdminSettingsPage() {
                     weeks={parseInt(settings.booking_blackout_weeks, 10) || 0}
                   />
                 </Section>
+
+                {/* ── Section: Contact & social links ─────────────────────── */}
+                <Section
+                  title="Contact & Social Links"
+                  description="Public contact info and social links shown on the website (Footer, Contact Us page, WhatsApp button)."
+                >
+                  <Field
+                    label="Phone"
+                    hint="Shown as-is on the Contact Us page. Used to build the phone link (tel:), so include the country code."
+                  >
+                    <TextInput
+                      value={settings.contact_phone}
+                      onChange={(v) => handleChange("contact_phone", v)}
+                      placeholder="1 (604) 555-0142"
+                    />
+                  </Field>
+
+                  <Field
+                    label="Email"
+                    hint="Used for the Footer mail icon and the Contact Us email link."
+                  >
+                    <EmailInput
+                      value={settings.contact_email}
+                      onChange={(v) => handleChange("contact_email", v)}
+                    />
+                  </Field>
+
+                  <Field
+                    label="Address"
+                    hint="Used to build the Google Maps embed on the Contact Us page."
+                  >
+                    <TextInput
+                      value={settings.contact_address}
+                      onChange={(v) => handleChange("contact_address", v)}
+                      placeholder="123 Main St, Victoria, BC V9A 0H7, Canada"
+                    />
+                  </Field>
+
+                  <Field
+                    label="WhatsApp number"
+                    hint="Digits only, including country code (no spaces or symbols) — used to build the wa.me link."
+                  >
+                    <TextInput
+                      value={settings.whatsapp_number}
+                      onChange={(v) => handleChange("whatsapp_number", v)}
+                      placeholder="16045550142"
+                    />
+                  </Field>
+
+                  <Field
+                    label="Instagram URL"
+                    hint="Leave empty to hide the Instagram icon in the Footer."
+                  >
+                    <UrlInput
+                      value={settings.social_instagram_url}
+                      onChange={(v) => handleChange("social_instagram_url", v)}
+                      placeholder="https://www.instagram.com/…"
+                    />
+                  </Field>
+
+                  <Field
+                    label="Facebook URL"
+                    hint="Leave empty to hide the Facebook icon in the Footer."
+                  >
+                    <UrlInput
+                      value={settings.social_facebook_url}
+                      onChange={(v) => handleChange("social_facebook_url", v)}
+                      placeholder="https://www.facebook.com/…"
+                    />
+                  </Field>
+                </Section>
               </>
             )}
           </div>
@@ -1046,6 +1154,46 @@ function EmailInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder="joaquin.labtinos@gmail.com"
+      className="w-64 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] transition-all bg-white"
+    />
+  );
+}
+
+function TextInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-64 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] transition-all bg-white"
+    />
+  );
+}
+
+function UrlInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="url"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
       className="w-64 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] transition-all bg-white"
     />
   );
