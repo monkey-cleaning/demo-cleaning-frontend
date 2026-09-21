@@ -1,7 +1,12 @@
 import AppRouter from './router/AppRouter';
+import { SiteConfigProvider } from './context/SiteConfigContext';
 
 function App() {
-  return <AppRouter />;
+  return (
+    <SiteConfigProvider>
+      <AppRouter />
+    </SiteConfigProvider>
+  );
 }
 
 export default App;
