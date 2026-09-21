@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ApiError, api } from '../api/client';
 import type { BlogMode } from '../api/siteConfig';
 import BlogDisabledScreen from '../components/admin/BlogDisabledScreen';
+import ConfirmModal from '../components/admin/ConfirmModal';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import { blogAdminCopy as copy } from '../copy/blogSettings';
 
@@ -29,6 +30,8 @@ export default function AdminBlogsListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [disabledByApi, setDisabledByApi] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,23 +63,28 @@ export default function AdminBlogsListPage() {
     load();
   }, [ready, blogEnabled]);
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-
+  const performDelete = async (id: number) => {
+    setDeleting(true);
     try {
       await api(`/api/admin/blogs/${id}`, { method: 'DELETE' });
       setPosts((prev) => prev.filter((p) => p.id !== id));
+      setPendingDeleteId(null);
     } catch (e: unknown) {
       console.error(e);
       if (e instanceof ApiError && e.code === 'blog_managed_by_platform') {
         alert(copy.managedByPlatform);
+        setPendingDeleteId(null);
         return;
       }
       if (e instanceof ApiError && e.code === 'blog_disabled') {
         setDisabledByApi(true);
+        setPendingDeleteId(null);
         return;
       }
       alert(e instanceof Error ? e.message : 'Error deleting the post');
+      setPendingDeleteId(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -166,7 +174,7 @@ export default function AdminBlogsListPage() {
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(p.id)}
+                                onClick={() => setPendingDeleteId(p.id)}
                                 className="px-3 py-1 rounded-md border border-red-300 text-xs text-red-600 hover:bg-red-50 transition-colors"
                               >
                                 Delete
@@ -226,7 +234,7 @@ export default function AdminBlogsListPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id)}
+                          onClick={() => setPendingDeleteId(p.id)}
                           className="flex-1 px-3 py-2 rounded-md border border-red-300 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
                           Delete
@@ -240,6 +248,21 @@ export default function AdminBlogsListPage() {
           </>
         )}
       </div>
+
+      {pendingDeleteId != null && (
+        <ConfirmModal
+          title={copy.deleteConfirmTitle}
+          body={copy.deleteConfirmBody}
+          cancelLabel={copy.deleteConfirmCancel}
+          confirmLabel={deleting ? copy.deleteConfirmDeleting : copy.deleteConfirmConfirm}
+          destructive
+          confirming={deleting}
+          onCancel={() => {
+            if (!deleting) setPendingDeleteId(null);
+          }}
+          onConfirm={() => void performDelete(pendingDeleteId)}
+        />
+      )}
     </div>
   );
 }

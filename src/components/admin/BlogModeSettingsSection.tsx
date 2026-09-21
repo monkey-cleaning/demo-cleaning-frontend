@@ -9,6 +9,7 @@ import {
 import type { BlogMode } from '../../api/siteConfig';
 import { useSiteConfig } from '../../context/SiteConfigContext';
 import { blogSettingsCopy as copy } from '../../copy/blogSettings';
+import ConfirmModal from './ConfirmModal';
 
 const MODE_ORDER: BlogMode[] = ['off', 'manual', 'auto'];
 
@@ -31,6 +32,7 @@ export default function BlogModeSettingsSection() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [draftMode, setDraftMode] = useState<BlogMode>('off');
   const [server, setServer] = useState<AdminBlogSettings | null>(null);
+  const [confirmOffOpen, setConfirmOffOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,26 +59,41 @@ export default function BlogModeSettingsSection() {
       ? addonNotice(server.blog_mode, server.auto_addon_status)
       : null;
 
-  async function handleSave() {
+  async function persistMode() {
+    setSaving(true);
     setError(null);
     setSuccessMsg(null);
-
-    if (draftMode === 'off' && server?.blog_mode !== 'off') {
-      if (!window.confirm(copy.confirmOff)) return;
-    }
-
-    setSaving(true);
     try {
       const data = await putAdminBlogSettings(draftMode);
       setServer(data);
       setDraftMode(data.blog_mode);
       setSuccessMsg(copy.saved);
+      setConfirmOffOpen(false);
       await refreshSiteConfig();
     } catch {
       setError(copy.saveError);
+      setConfirmOffOpen(false);
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleSave() {
+    setError(null);
+    setSuccessMsg(null);
+
+    if (draftMode === 'off' && server?.blog_mode !== 'off') {
+      setConfirmOffOpen(true);
+      return;
+    }
+
+    void persistMode();
+  }
+
+  function handleConfirmOffCancel() {
+    if (saving) return;
+    setConfirmOffOpen(false);
+    if (server) setDraftMode(server.blog_mode);
   }
 
   return (
@@ -179,6 +196,19 @@ export default function BlogModeSettingsSection() {
             </button>
           </div>
         </div>
+      )}
+
+      {confirmOffOpen && (
+        <ConfirmModal
+          title={copy.confirmOffTitle}
+          body={copy.confirmOff}
+          cancelLabel={copy.confirmOffCancel}
+          confirmLabel={saving ? copy.saving : copy.confirmOffConfirm}
+          destructive
+          confirming={saving}
+          onCancel={handleConfirmOffCancel}
+          onConfirm={() => void persistMode()}
+        />
       )}
     </div>
   );

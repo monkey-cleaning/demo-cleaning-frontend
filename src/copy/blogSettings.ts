@@ -39,8 +39,11 @@ export const blogSettingsCopy = {
       effective === 'off' ? 'Off' : effective === 'manual' ? 'Manual' : 'Auto'
     }.`,
 
+  confirmOffTitle: 'Turn off the blog?',
   confirmOff:
-    'Turn off the public blog? The Blog link and pages will be hidden. Existing posts are kept and you can turn it back on later.',
+    'The Blog link and public pages will be hidden. Existing posts are kept and you can turn it back on later.',
+  confirmOffCancel: 'Cancel',
+  confirmOffConfirm: 'Turn off blog',
 
   save: 'Save blog mode',
   saving: 'Saving…',
@@ -56,9 +59,15 @@ export const blogAdminCopy = {
   disabledBody:
     'The public blog is turned off. Turn it on in Settings to manage posts again.',
   disabledCta: 'Open Settings',
-  syncedBadge: 'Sincronizado',
+  syncedBadge: 'Synced',
   syncedReadOnlyHint: 'This post is managed by the platform and cannot be edited here.',
   managedByPlatform:
     'This post is managed by the platform and cannot be changed while Auto mode is active.',
   blogDisabledError: 'Blog is disabled. Enable it in Settings to continue.',
+  deleteConfirmTitle: 'Delete this post?',
+  deleteConfirmBody:
+    'It will be permanently removed. This action cannot be undone.',
+  deleteConfirmCancel: 'Cancel',
+  deleteConfirmConfirm: 'Delete',
+  deleteConfirmDeleting: 'Deleting…',
 } as const;

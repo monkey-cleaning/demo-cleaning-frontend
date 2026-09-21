@@ -10,7 +10,9 @@ import { api } from '../api/client';
 import RequireAdmin from '../components/admin/RequireAdmin';
 import AdminNavbar from '../components/admin/AdminNavbar';
 import HistoryDrawer from '../components/admin/HistoryDrawer';
+import ConfirmModal from '../components/admin/ConfirmModal';
 import { ClientFormModal } from '../components/admin/ClientFormModal';
+import { invoicesAdminCopy } from '../copy/invoices';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -458,6 +460,7 @@ export default function AdminInvoicesPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const status = searchParams.get('status') ?? '';
   const page = Number(searchParams.get('page') ?? 1);
@@ -572,14 +575,19 @@ export default function AdminInvoicesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this draft invoice?')) return;
+    setPendingDeleteId(id);
+  }
+
+  async function performDelete(id: string) {
     setActionLoading(id + '-delete');
     try {
       await deleteInvoice(id);
       showToast('Draft deleted ✓');
+      setPendingDeleteId(null);
       load();
     } catch (e: any) {
       showToast('Error: ' + e.message);
+      setPendingDeleteId(null);
     } finally {
       setActionLoading(null);
     }
@@ -820,6 +828,27 @@ export default function AdminInvoicesPage() {
           <CreateInvoiceModal
             onClose={() => setShowModal(false)}
             onCreated={load}
+          />
+        )}
+
+        {pendingDeleteId != null && (
+          <ConfirmModal
+            title={invoicesAdminCopy.deleteDraftTitle}
+            body={invoicesAdminCopy.deleteDraftBody}
+            cancelLabel={invoicesAdminCopy.deleteDraftCancel}
+            confirmLabel={
+              actionLoading === pendingDeleteId + '-delete'
+                ? invoicesAdminCopy.deleteDraftDeleting
+                : invoicesAdminCopy.deleteDraftConfirm
+            }
+            destructive
+            confirming={actionLoading === pendingDeleteId + '-delete'}
+            onCancel={() => {
+              if (actionLoading !== pendingDeleteId + '-delete') {
+                setPendingDeleteId(null);
+              }
+            }}
+            onConfirm={() => void performDelete(pendingDeleteId)}
           />
         )}
 
