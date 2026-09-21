@@ -14,7 +14,7 @@
 // The `title` / `subtitle` props let each page push its own heading into the
 // shared bar so the left side always reads consistently.
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu,
@@ -30,8 +30,12 @@ import {
   DollarSign,
   KeyRound,
   LogOut,
+  Newspaper,
 } from 'lucide-react';
 import AccountModal from './AccountModal';
+import { BRAND_NAME } from '../../config/brand';
+import { useSiteConfig } from '../../context/SiteConfigContext';
+import { blogAdminCopy } from '../../copy/blogSettings';
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 
@@ -39,6 +43,8 @@ interface NavItem {
   label: string;
   to: string;
   icon: React.ElementType;
+  /** When true, item is only shown if the public blog is enabled. */
+  requiresBlog?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -50,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Invoices',  to: '/admin/invoices', icon: FileText },
   { label: 'Payroll',   to: '/admin/payroll',  icon: DollarSign },
   { label: 'Activity',  to: '/admin/activity', icon: History },
+  { label: blogAdminCopy.navLabel, to: '/admin/blogs', icon: Newspaper, requiresBlog: true },
   { label: 'Settings',  to: '/admin/settings', icon: Settings2 },
 ];
 
@@ -78,7 +85,7 @@ interface AdminNavbarProps {
 
 export default function AdminNavbar({
   title = 'Admin Dashboard',
-  sectionLabel = 'Demo Cleaning Co.',
+  sectionLabel = BRAND_NAME,
   onRefresh,
   refreshing = false,
   rightSlot,
@@ -87,6 +94,16 @@ export default function AdminNavbar({
   const [showChangePassword, setShowChangePassword] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { ready, blogEnabled } = useSiteConfig();
+
+  const navItems = useMemo(
+    () =>
+      NAV_ITEMS.filter((item) => {
+        if (!item.requiresBlog) return true;
+        return ready && blogEnabled;
+      }),
+    [ready, blogEnabled],
+  );
 
   // Exact match for /admin, prefix match for everything else
   function isActive(to: string) {
@@ -123,7 +140,7 @@ export default function AdminNavbar({
               the page title and used to overlap it — tablets get the
               hamburger dropdown too. */}
           <nav className="hidden lg:flex items-center gap-0.5 mr-1" aria-label="Admin navigation">
-            {NAV_ITEMS.filter(n => n.label !== 'Dashboard').map(({ label, to }) => (
+            {navItems.filter(n => n.label !== 'Dashboard').map(({ label, to }) => (
               <Link
                 key={to}
                 to={to}
@@ -190,7 +207,7 @@ export default function AdminNavbar({
       {/* ── Mobile/tablet dropdown ───────────────────────────────────────────── */}
       {menuOpen && (
         <nav className="lg:hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-0.5" aria-label="Admin navigation mobile">
-          {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
+          {navItems.map(({ label, to, icon: Icon }) => (
             <Link
               key={to}
               to={to}

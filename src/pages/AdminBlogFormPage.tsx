@@ -4,6 +4,11 @@ import { API_BASE_URL } from '../api/client';
 import { supabase } from '../lib/supabaseClient';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import BlogDisabledScreen from '../components/admin/BlogDisabledScreen';
+import { useSiteConfig } from '../context/SiteConfigContext';
+import { blogAdminCopy as copy } from '../copy/blogSettings';
+import { BRAND_NAME } from '../config/brand';
+import type { BlogPostSource } from './AdminBlogsListPage';
 
 const quillModules = {
   toolbar: [
@@ -55,6 +60,7 @@ type AdminBlogDetail = {
     published_at: string | null;
     seo_title: string | null;
     seo_description: string | null;
+    source?: BlogPostSource;
   };
   sections: {
     id: number;
@@ -73,6 +79,7 @@ export default function AdminBlogFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id) && id !== 'new';
   const navigate = useNavigate();
+  const { ready, blogEnabled, blogMode } = useSiteConfig();
 
   const [slug, setSlug] = useState('');
   const [title, setTitle] = useState('');
@@ -89,10 +96,21 @@ export default function AdminBlogFormPage() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [postSource, setPostSource] = useState<BlogPostSource | undefined>(undefined);
+  const [disabledByApi, setDisabledByApi] = useState(false);
+  const [platformLocked, setPlatformLocked] = useState(false);
+
+  const readOnly =
+    platformLocked ||
+    (blogMode === 'auto' && postSource === 'seo-blog-platform');
 
   // Carga de datos si es edición
   useEffect(() => {
     if (!isEdit) return;
+    if (ready && !blogEnabled) {
+      setLoading(false);
+      return;
+    }
 
     const load = async () => {
       try {
@@ -102,12 +120,21 @@ export default function AdminBlogFormPage() {
         });
 
         if (!response.ok) {
-          throw new Error('Error fetching blog post');
+          const body = await response.json().catch(() => ({}));
+          if (response.status === 403 && body?.code === 'blog_disabled') {
+            setDisabledByApi(true);
+            return;
+          }
+          if (response.status === 403 && body?.code === 'blog_managed_by_platform') {
+            setPlatformLocked(true);
+          }
+          throw new Error(body?.error || 'Error fetching blog post');
         }
 
         const data: AdminBlogDetail = await response.json();
         const p = data.post;
 
+        setPostSource(p.source);
         setSlug(p.slug);
         setTitle(p.title);
         setExcerpt(p.excerpt);
@@ -136,14 +163,14 @@ export default function AdminBlogFormPage() {
         );
       } catch (e) {
         console.error(e);
-        alert('Error loading post');
+        if (!disabledByApi) alert('Error loading post');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [id, isEdit]);
+  }, [id, isEdit, ready, blogEnabled]);
 
   const handleAddSection = () => {
     const nextOrder =
@@ -252,6 +279,11 @@ export default function AdminBlogFormPage() {
   };
 
   const handleSave = async () => {
+    if (readOnly) {
+      alert(copy.managedByPlatform);
+      return;
+    }
+
     // Validate before saving
     if (!validateForm()) {
       alert('Please fix the errors before saving');
@@ -299,6 +331,15 @@ export default function AdminBlogFormPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (response.status === 403 && errorData?.code === 'blog_disabled') {
+          setDisabledByApi(true);
+          return;
+        }
+        if (response.status === 403 && errorData?.code === 'blog_managed_by_platform') {
+          alert(copy.managedByPlatform);
+          setPlatformLocked(true);
+          return;
+        }
         throw new Error(errorData.error || `Error ${response.status}`);
       }
 
@@ -311,7 +352,11 @@ export default function AdminBlogFormPage() {
     }
   };
 
-  if (loading) {
+  if (ready && (!blogEnabled || disabledByApi)) {
+    return <BlogDisabledScreen />;
+  }
+
+  if (!ready || loading) {
     return <div className="p-8 text-center text-gray-500">Loading...</div>;
   }
 
@@ -319,9 +364,21 @@ export default function AdminBlogFormPage() {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto px-4 space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-montserrat font-bold text-[#031634]">
-            {isEdit ? 'Edit Post' : 'New Post'}
-          </h1>
+          <div>
+            <h1 className="text-2xl font-montserrat font-bold text-[#031634]">
+              {readOnly ? 'View Post' : isEdit ? 'Edit Post' : 'New Post'}
+            </h1>
+            {readOnly && (
+              <p className="mt-1 text-sm text-indigo-700">
+                <span className="inline-flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-semibold uppercase tracking-wide">
+                    {copy.syncedBadge}
+                  </span>
+                  {copy.syncedReadOnlyHint}
+                </span>
+              </p>
+            )}
+          </div>
           <button
             onClick={() => navigate('/admin/blogs')}
             className="text-sm text-gray-500 underline"
@@ -330,6 +387,7 @@ export default function AdminBlogFormPage() {
           </button>
         </div>
 
+        <fieldset disabled={readOnly} className="space-y-8 disabled:opacity-90">
         {/* Main data */}
         <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
@@ -451,7 +509,7 @@ export default function AdminBlogFormPage() {
                   setAuthor(e.target.value);
                   if (errors.author) setErrors(prev => ({ ...prev, author: '' }));
                 }}
-                placeholder="Demo Cleaning Co. Team"
+                placeholder={`${BRAND_NAME} Team`}
               />
               {errors.author && (
                 <p className="text-red-500 text-xs mt-1">{errors.author}</p>
@@ -710,15 +768,18 @@ export default function AdminBlogFormPage() {
         </div>
 
         {/* Save button */}
-        <div className="flex justify-end">
-          <button
-            disabled={saving}
-            onClick={handleSave}
-            className="px-6 py-2 rounded-lg bg-[#031634] text-white text-sm font-montserrat disabled:opacity-60"
-          >
-            {saving ? 'Saving...' : 'Save post'}
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex justify-end">
+            <button
+              disabled={saving}
+              onClick={handleSave}
+              className="px-6 py-2 rounded-lg bg-[#031634] text-white text-sm font-montserrat disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save post'}
+            </button>
+          </div>
+        )}
+        </fieldset>
       </div>
     </div>
   );
