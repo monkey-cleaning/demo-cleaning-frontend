@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import arrowDown from '../../assets/arrow-down.png';
-import { useNavigate } from 'react-router-dom';
+import { BRAND_NAME } from '../../config/brand';
+import { useSiteConfig } from '../../context/SiteConfigContext';
 
 interface NavbarProps {
   variant?: 'default' | 'transparent';
@@ -32,6 +33,8 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
   const [desktopDropdown, setDesktopDropdown] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { ready, blogEnabled } = useSiteConfig();
+  const showBlogLink = ready && blogEnabled;
 
   const navigation = {
     home: { path: '/', label: 'Home' },
@@ -125,7 +128,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       ============================================================ */}
       <div className={`${variant === 'transparent' ? 'pt-10' : 'py-4'} hidden lg:flex items-center justify-between max-w-6xl mx-auto px-1`}>
         <NavLink to="/" end>
-          <span className="font-montserrat font-bold text-navy text-2xl whitespace-nowrap">Demo Cleaning Co.</span>
+          <span className="font-montserrat font-bold text-navy text-2xl whitespace-nowrap">{BRAND_NAME}</span>
         </NavLink>
 
         <nav className={`flex items-center gap-10 rounded-[24px] px-[18px] py-[20px] relative ${navPillBackground}`}>
@@ -165,9 +168,11 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
             <SpecializedDropdown />
           </div>
 
-          <NavLink to={navigation.blog.path} className={desktopLinkClasses}>
-            {navigation.blog.label}
-          </NavLink>
+          {showBlogLink && (
+            <NavLink to={navigation.blog.path} className={desktopLinkClasses}>
+              {navigation.blog.label}
+            </NavLink>
+          )}
         </nav>
 
         <button
@@ -188,7 +193,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
       ============================================================ */}
       <div className={`${variant === 'transparent' ? 'pt-8' : 'py-3'} hidden md:flex lg:hidden items-center justify-between w-full px-[4%]`}>
         <NavLink to="/" end>
-          <span className="font-montserrat font-bold text-navy text-lg whitespace-nowrap">Demo Cleaning Co.</span>
+          <span className="font-montserrat font-bold text-navy text-lg whitespace-nowrap">{BRAND_NAME}</span>
         </NavLink>
 
         <nav className={`flex items-center gap-5 rounded-[20px] px-[14px] py-[14px] relative ${navPillBackground}`}>
@@ -230,9 +235,11 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
             <SpecializedDropdown />
           </div>
 
-          <NavLink to={navigation.blog.path} className={tabletLinkClasses}>
-            {navigation.blog.label}
-          </NavLink>
+          {showBlogLink && (
+            <NavLink to={navigation.blog.path} className={tabletLinkClasses}>
+              {navigation.blog.label}
+            </NavLink>
+          )}
         </nav>
 
         <button
@@ -250,7 +257,7 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
         <div className="flex items-center justify-between">
           <div className='ml-5'>
             <NavLink to="/" end>
-              <span className="font-montserrat font-bold text-navy text-xs whitespace-nowrap">Demo Cleaning Co.</span>
+              <span className="font-montserrat font-bold text-navy text-xs whitespace-nowrap">{BRAND_NAME}</span>
             </NavLink>
           </div>
           <div className='mr-5'>
@@ -317,9 +324,11 @@ export default function Navbar({ variant = 'default' }: NavbarProps) {
               ))}
             </div>
 
-            <NavLink to={navigation.blog.path} className={mobileLinkClasses} onClick={() => setMobileOpen(false)}>
-              {navigation.blog.label}
-            </NavLink>
+            {showBlogLink && (
+              <NavLink to={navigation.blog.path} className={mobileLinkClasses} onClick={() => setMobileOpen(false)}>
+                {navigation.blog.label}
+              </NavLink>
+            )}
 
             <button
               className={`mt-4 w-full rounded-full py-3 text-sm font-montserrat font-medium transition-colors duration-200 ${variant === 'transparent'

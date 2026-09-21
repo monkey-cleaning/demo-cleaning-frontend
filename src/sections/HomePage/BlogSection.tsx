@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { API_BASE_URL } from '../../api/client';
+import { BRAND_NAME } from '../../config/brand';
+import { useSiteConfig } from '../../context/SiteConfigContext';
 
 type BlogPost = {
   id: number;
@@ -21,6 +23,7 @@ const formatPostDate = (iso: string) => {
 };
 
 export default function BlogSection() {
+  const { ready, blogEnabled } = useSiteConfig();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
@@ -40,6 +43,12 @@ export default function BlogSection() {
   }, []);
 
   useEffect(() => {
+    if (!ready || !blogEnabled) {
+      setLoading(false);
+      setBlogPosts([]);
+      return;
+    }
+
     const loadPosts = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/blogs`);
@@ -55,14 +64,14 @@ export default function BlogSection() {
       }
     };
     loadPosts();
-  }, []);
+  }, [ready, blogEnabled]);
 
   const nextSlide = () => { if (currentIndex < blogPosts.length - 1) setCurrentIndex((p) => p + 1); };
   const prevSlide = () => { if (currentIndex > 0) setCurrentIndex((p) => p - 1); };
   const handleReadMore = (slug: string) => { window.location.href = `/blog/${slug}`; };
   const handleViewAllBlogs = () => { window.location.href = '/blog'; };
 
-  if (loading || blogPosts.length === 0) return null;
+  if (!ready || !blogEnabled || loading || blogPosts.length === 0) return null;
 
   /* ── card width (desktop only) ─────────────────────────────────────────── */
   const DESKTOP_CARD_W = 554;
@@ -80,12 +89,12 @@ export default function BlogSection() {
   return (
     <>
       <Helmet>
-        <title>Cleaning Services Victoria BC | Demo Cleaning Co.</title>
-        <meta name="description" content="Expert tips, company updates, and home care insights from Demo Cleaning Co. Learn professional cleaning techniques and home maintenance advice." />
+        <title>Cleaning Services Victoria BC | {BRAND_NAME}</title>
+        <meta name="description" content={`Expert tips, company updates, and home care insights from ${BRAND_NAME}. Learn professional cleaning techniques and home maintenance advice.`} />
         <meta name="keywords" content="cleaning tips, home care, cleaning blog, house cleaning advice, professional cleaning" />
         <link rel="canonical" href="https://demo-cleaning-frontend.onrender.com/blog" />
-        <meta property="og:title" content="The Clean Living Blog | Demo Cleaning Co. Canada" />
-        <meta property="og:description" content="Expert tips, company updates, and home care insights from Demo Cleaning Co." />
+        <meta property="og:title" content={`The Clean Living Blog | ${BRAND_NAME}`} />
+        <meta property="og:description" content={`Expert tips, company updates, and home care insights from ${BRAND_NAME}.`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://demo-cleaning-frontend.onrender.com/blog" />
       </Helmet>

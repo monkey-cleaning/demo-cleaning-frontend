@@ -7,8 +7,12 @@ import TestimonialsSection from '../sections/HomePage/TestimonialsSection';
 import WhyChooseUsSection from '../sections/HomePage/WhyChooseUsSection';
 import BlogSection from '../sections/HomePage/BlogSection';
 import Footer from '../components/layout/Footer';
+import { useSiteConfig } from '../context/SiteConfigContext';
 
 export default function HomePage() {
+  const { ready, blogEnabled } = useSiteConfig();
+  const showBlog = ready && blogEnabled;
+
   return (
     <div className="min-h-screen">
       <HeroSection />
@@ -18,7 +22,7 @@ export default function HomePage() {
       <FormSection />
       <TestimonialsSection />
       <WhyChooseUsSection />
-      <BlogSection />
+      {showBlog && <BlogSection />}
       <Footer />
     </div>
   );

@@ -35,6 +35,7 @@ import ResetPasswordPage from '../pages/ResetPasswordPage';
 import SurveyPage from '../pages/SurveyPage';
 import RequireStaff from '../components/staff/RequireStaff';
 import NotFoundPage from '../pages/NotFoundPage';
+import PublicBlogGate from '../components/blog/PublicBlogGate';
 
 export default function AppRouter() {
   return (
@@ -56,8 +57,22 @@ export default function AppRouter() {
       <Route path="/services/specialized/carpet" element={<CarpetCleaningPage />} />
       <Route path="/services/specialized/tile" element={<TileCleaningPage />} />
 
-      <Route path="/blog" element={<BlogPage />} />
-      <Route path="/blog/:slug" element={<BlogPostDetailPage />} />
+      <Route
+        path="/blog"
+        element={
+          <PublicBlogGate>
+            <BlogPage />
+          </PublicBlogGate>
+        }
+      />
+      <Route
+        path="/blog/:slug"
+        element={
+          <PublicBlogGate>
+            <BlogPostDetailPage />
+          </PublicBlogGate>
+        }
+      />
 
       {/* Auth recovery — sin auth, compartido admin/staff */}
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

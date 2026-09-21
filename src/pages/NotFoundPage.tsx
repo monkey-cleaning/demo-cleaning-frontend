@@ -1,12 +1,23 @@
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 
-export default function NotFoundPage() {
+type Props = {
+  /** When the 404 is used because the public blog is disabled. */
+  noIndex?: boolean;
+};
+
+export default function NotFoundPage({ noIndex = false }: Props) {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      {noIndex && (
+        <Helmet>
+          <meta name="robots" content="noindex" />
+        </Helmet>
+      )}
       {/* Standard navbar — full-width wrapper matches the HeroSection context */}
       <div className="w-full flex-shrink-0">
         <Navbar variant="default" />

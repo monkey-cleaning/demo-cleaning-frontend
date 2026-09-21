@@ -38,8 +38,7 @@ export const BRAND_NAME = fromEnv(env.VITE_BRAND_NAME, 'Demo Cleaning Co.');
 
 /**
  * Telefono de contacto en digitos E.164 sin '+'.
- * Default: placeholder ficticio (rango NANP reservado 555-01XX); el numero real
- * era de Monkey Cleaning.
+ * Default: placeholder ficticio (rango NANP reservado 555-01XX).
  */
 export const CONTACT_PHONE = digitsOf(fromEnv(env.VITE_CONTACT_PHONE, '16045550142'));
 
