@@ -56,7 +56,7 @@ export const blogAdminCopy = {
   disabledBody:
     'The public blog is turned off. Turn it on in Settings to manage posts again.',
   disabledCta: 'Open Settings',
-  syncedBadge: 'Synced',
+  syncedBadge: 'Sincronizado',
   syncedReadOnlyHint: 'This post is managed by the platform and cannot be edited here.',
   managedByPlatform:
     'This post is managed by the platform and cannot be changed while Auto mode is active.',

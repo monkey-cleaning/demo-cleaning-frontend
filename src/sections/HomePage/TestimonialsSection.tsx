@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { BRAND_NAME, GOOGLE_REVIEWS_URL } from '../../config/brand';
 
 interface Testimonial {
   id: number;
@@ -60,7 +61,7 @@ export default function TestimonialsSection() {
       name: "James Hobbs",
       date: "1 year ago",
       rating: 5,
-      text: "I have used multiple house cleaning services over the last 10 years and I can say without a doubt that Monkey is the best.",
+      text: `I have used multiple house cleaning services over the last 10 years and I can say without a doubt that ${BRAND_NAME} is the best.`,
       image: null,
       hasCustomImage: true
     },
@@ -149,8 +150,11 @@ export default function TestimonialsSection() {
     ];
   };
 
+  const reviewsClickable = Boolean(GOOGLE_REVIEWS_URL);
+
   const handleCardClick = () => {
-    window.open('https://www.google.com/search?hl=en&sca_esv=f517df8b24517ced&cs=0&output=search&kgmid=/g/11y2kpps1b&q=Monkey+Cleaning&shndl=30&shem=dimg1,shrtsdl&source=sh/x/kp/local/m1/1&kgs=6879aec26f364bd1&utm_source=dimg1,shrtsdl,sh/x/kp/local/m1/1#lrd=0x6f5f49e399962659:0x4a3819f0c4e8b19a,1,,,,', '_blank');
+    if (!GOOGLE_REVIEWS_URL) return;
+    window.open(GOOGLE_REVIEWS_URL, '_blank', 'noopener,noreferrer');
   };
 
   const toggleExpand = (testimonialId: number, e: React.MouseEvent) => {
@@ -298,8 +302,10 @@ export default function TestimonialsSection() {
               return (
                 <div
                   key={`${testimonial.id}-${index}`}
-                  onClick={handleCardClick}
-                  className={`cursor-pointer transition-all duration-500 flex-shrink-0 ${
+                  onClick={reviewsClickable ? handleCardClick : undefined}
+                  className={`transition-all duration-500 flex-shrink-0 ${
+                    reviewsClickable ? 'cursor-pointer' : ''
+                  } ${
                     isCenter ? 'scale-105 opacity-100' : 'scale-95 opacity-80'
                   }`}
                   style={{
@@ -367,8 +373,10 @@ export default function TestimonialsSection() {
           <div className="relative flex items-center justify-start gap-4 px-4 overflow-hidden">
             {/* First card - active */}
             <div
-              onClick={handleCardClick}
-              className="cursor-pointer transition-all duration-500 flex-shrink-0"
+              onClick={reviewsClickable ? handleCardClick : undefined}
+              className={`transition-all duration-500 flex-shrink-0 ${
+                reviewsClickable ? 'cursor-pointer' : ''
+              }`}
               style={{
                 width: '222.9px',
                 padding: '14.46px',
@@ -416,8 +424,10 @@ export default function TestimonialsSection() {
 
             {/* Second card - preview */}
             <div
-              onClick={handleCardClick}
-              className="cursor-pointer transition-all duration-500 opacity-70 flex-shrink-0"
+              onClick={reviewsClickable ? handleCardClick : undefined}
+              className={`transition-all duration-500 opacity-70 flex-shrink-0 ${
+                reviewsClickable ? 'cursor-pointer' : ''
+              }`}
               style={{
                 width: '222.9px',
                 padding: '14.46px',

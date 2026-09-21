@@ -62,3 +62,10 @@ export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
 export function whatsappUrl(message: string): string {
   return `${WHATSAPP_URL}?text=${encodeURIComponent(message)}`;
 }
+
+/**
+ * URL pública de reseñas (p.ej. Google Business). Opcional.
+ * Si está vacía, las tarjetas de testimonials no son clickeables —
+ * no hay fallback de búsqueda (evitar negocios homónimos).
+ */
+export const GOOGLE_REVIEWS_URL = fromEnv(env.VITE_GOOGLE_REVIEWS_URL, '');
