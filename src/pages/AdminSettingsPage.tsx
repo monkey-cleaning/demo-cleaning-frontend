@@ -4,6 +4,8 @@ import { RefreshCw, AlertCircle, History } from "lucide-react";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import AdminNavbar from '../components/admin/AdminNavbar';
 import HistoryDrawer from "../components/admin/HistoryDrawer";
+import BlogModeSettingsSection from "../components/admin/BlogModeSettingsSection";
+import { BRAND_NAME } from "../config/brand";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -512,6 +514,7 @@ export default function AdminSettingsPage() {
         {/*Navbar */}
         <AdminNavbar
           title="Settings"
+          sectionLabel={BRAND_NAME}
           rightSlot={
             <>
               <button
@@ -988,6 +991,9 @@ export default function AdminSettingsPage() {
                     weeks={parseInt(settings.booking_blackout_weeks, 10) || 0}
                   />
                 </Section>
+
+                {/* ── Section: Blog mode (separate API) ─────────────────── */}
+                <BlogModeSettingsSection />
 
                 {/* ── Section: Contact & social links ─────────────────────── */}
                 <Section
