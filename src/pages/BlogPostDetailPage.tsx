@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { API_BASE_URL } from "../api/client";
+import { BRAND_NAME } from "../config/brand";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import facebookIcon from "../assets/facebook-icon.png";
@@ -130,7 +131,7 @@ export default function BlogPostDetailPage() {
   const { post, sections, related } = data;
   const introText = sections.length > 0 && sections[0].body ? sections[0].body : post.excerpt;
 
-  const pageTitle = (post.seoTitle || post.title) + " | Demo Cleaning Co.";
+  const pageTitle = (post.seoTitle || post.title) + ` | ${BRAND_NAME}`;
   const pageDescription = post.seoDescription || post.excerpt.slice(0, 155);
   const baseOrigin = typeof window !== "undefined" ? window.location.origin : "https://demo-cleaning-frontend.onrender.com";
   const url = `${baseOrigin}/blog/${post.slug}`;
@@ -159,7 +160,7 @@ export default function BlogPostDetailPage() {
             headline: post.seoTitle || post.title,
             description: pageDescription,
             image: ogImage ? [ogImage] : undefined,
-            author: { "@type": "Organization", name: post.author || "Demo Cleaning Co." },
+            author: { "@type": "Organization", name: post.author || BRAND_NAME },
             datePublished: post.date,
             mainEntityOfPage: { "@type": "WebPage", "@id": url },
           })}

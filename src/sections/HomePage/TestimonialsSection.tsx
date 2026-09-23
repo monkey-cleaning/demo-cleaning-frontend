@@ -70,7 +70,7 @@ export default function TestimonialsSection() {
       name: "Dave Edwards",
       date: "1 year ago",
       rating: 5,
-      text: "Very impressed with Demo Cleaning Co. Had them do a thorough house cleaning over two sessions over a couple of days",
+      text: `Very impressed with ${BRAND_NAME}. Had them do a thorough house cleaning over two sessions over a couple of days`,
       image: null,
       hasCustomImage: false
     },
@@ -79,7 +79,7 @@ export default function TestimonialsSection() {
       name: "Hannah Bell",
       date: "1 year ago",
       rating: 5,
-      text: "I used Demo Cleaning Co. for a move out cleaning and I was impressed by how quick, efficient and carefully they did the cleaning.",
+      text: `I used ${BRAND_NAME} for a move out cleaning and I was impressed by how quick, efficient and carefully they did the cleaning.`,
       image: null,
       hasCustomImage: true
     },
@@ -106,7 +106,7 @@ export default function TestimonialsSection() {
       name: "Cindy Brown",
       date: "10 months ago",
       rating: 5,
-      text: "We've been using Demo Cleaning Co. for a number of months now and absolutely love them. Their cleaning is excellent, they are always right on time.",
+      text: `We've been using ${BRAND_NAME} for a number of months now and absolutely love them. Their cleaning is excellent, they are always right on time.`,
       image: null,
       hasCustomImage: false
     },
@@ -115,7 +115,7 @@ export default function TestimonialsSection() {
       name: "Ann",
       date: "1 year ago",
       rating: 5,
-      text: "Demo Cleaning Co. is the absolute best!! I cannot even begin to express how amazing their staff is. Not only were they kind and super friendly, but they practically radiated sunshine and rainbows! If you want a spotless home and an extremely delightful experience, then Demo Cleaning Co. is the way to go! Trust me, you won't find a better house cleaning service anywhere else!",
+      text: `${BRAND_NAME} is the absolute best!! I cannot even begin to express how amazing their staff is. Not only were they kind and super friendly, but they practically radiated sunshine and rainbows! If you want a spotless home and an extremely delightful experience, then ${BRAND_NAME} is the way to go! Trust me, you won't find a better house cleaning service anywhere else!`,
       image: null,
       hasCustomImage: true
     }
