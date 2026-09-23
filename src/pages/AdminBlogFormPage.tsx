@@ -5,10 +5,12 @@ import { supabase } from '../lib/supabaseClient';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import BlogDisabledScreen from '../components/admin/BlogDisabledScreen';
+import AdminNavbar from '../components/admin/AdminNavbar';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import { blogAdminCopy as copy } from '../copy/blogSettings';
 import { BRAND_NAME } from '../config/brand';
 import type { BlogPostSource } from './AdminBlogsListPage';
+import { ArrowLeft } from 'lucide-react';
 
 const quillModules = {
   toolbar: [
@@ -353,39 +355,74 @@ export default function AdminBlogFormPage() {
   };
 
   if (ready && (!blogEnabled || disabledByApi)) {
-    return <BlogDisabledScreen />;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar
+          title="Blogs"
+          rightSlot={
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-white/30 rounded-lg text-white/80 hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft size={14} />
+              Dashboard
+            </button>
+          }
+        />
+        <BlogDisabledScreen />
+      </div>
+    );
   }
 
   if (!ready || loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar
+          title="Blogs"
+          rightSlot={
+            <button
+              type="button"
+              onClick={() => navigate('/admin/blogs')}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-white/30 rounded-lg text-white/80 hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft size={14} />
+              Back to list
+            </button>
+          }
+        />
+        <div className="p-8 text-center text-gray-500">Loading...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-4xl mx-auto px-4 space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-montserrat font-bold text-[#031634]">
-              {readOnly ? 'View Post' : isEdit ? 'Edit Post' : 'New Post'}
-            </h1>
-            {readOnly && (
-              <p className="mt-1 text-sm text-indigo-700">
-                <span className="inline-flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-semibold uppercase tracking-wide">
-                    {copy.syncedBadge}
-                  </span>
-                  {copy.syncedReadOnlyHint}
-                </span>
-              </p>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavbar
+        title={readOnly ? 'View Post' : isEdit ? 'Edit Post' : 'New Post'}
+        rightSlot={
           <button
+            type="button"
             onClick={() => navigate('/admin/blogs')}
-            className="text-sm text-gray-500 underline"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-white/30 rounded-lg text-white/80 hover:bg-white/10 transition-colors"
           >
+            <ArrowLeft size={14} />
             Back to list
           </button>
-        </div>
+        }
+      />
+
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-8">
+        {readOnly && (
+          <p className="text-sm text-indigo-700">
+            <span className="inline-flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-semibold uppercase tracking-wide">
+                {copy.syncedBadge}
+              </span>
+              {copy.syncedReadOnlyHint}
+            </span>
+          </p>
+        )}
 
         <fieldset disabled={readOnly} className="space-y-8 disabled:opacity-90">
         {/* Main data */}

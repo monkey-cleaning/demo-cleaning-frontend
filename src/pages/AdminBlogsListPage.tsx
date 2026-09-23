@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { ApiError, api } from '../api/client';
 import type { BlogMode } from '../api/siteConfig';
+import AdminNavbar from '../components/admin/AdminNavbar';
 import BlogDisabledScreen from '../components/admin/BlogDisabledScreen';
 import ConfirmModal from '../components/admin/ConfirmModal';
 import { useSiteConfig } from '../context/SiteConfigContext';
@@ -88,34 +90,51 @@ export default function AdminBlogsListPage() {
     }
   };
 
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => navigate('/admin')}
+      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-white/30 rounded-lg text-white/80 hover:bg-white/10 transition-colors"
+    >
+      <ArrowLeft size={14} />
+      Dashboard
+    </button>
+  );
+
   if (ready && (!blogEnabled || disabledByApi)) {
-    return <BlogDisabledScreen />;
-  }
-
-  if (!ready || loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-500">{error}</div>;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar title="Blogs" rightSlot={backButton} />
+        <BlogDisabledScreen />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-5xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-montserrat font-bold text-[#031634]">
-            Blog Posts (Admin)
-          </h1>
-          <button
-            onClick={() => navigate('/admin/blogs/new')}
-            className="px-4 py-2 rounded-lg bg-[#031634] text-white font-montserrat text-sm hover:bg-[#042045] transition-colors"
-          >
-            + New Post
-          </button>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavbar
+        title="Blogs"
+        rightSlot={
+          <>
+            {backButton}
+            <button
+              type="button"
+              onClick={() => navigate('/admin/blogs/new')}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gold text-navy text-xs font-semibold rounded-lg hover:bg-gold/90 transition-colors"
+            >
+              <Plus size={14} />
+              New Post
+            </button>
+          </>
+        }
+      />
 
-        {posts.length === 0 ? (
+      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+        {!ready || loading ? (
+          <div className="p-8 text-center text-gray-500">Loading...</div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500">{error}</div>
+        ) : posts.length === 0 ? (
           <p className="text-gray-500">No posts yet.</p>
         ) : (
           <>
