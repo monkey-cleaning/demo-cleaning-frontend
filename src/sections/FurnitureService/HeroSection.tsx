@@ -1,9 +1,9 @@
 import Navbar from '../../components/layout/Navbar';
-import heroDesktop from '../../assets/furniture-img.jpg';
-import heroMobile from '../../assets/furniture-img-mobile.jpg';
 import rightIcon from '../../assets/rightIcon.png';
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 export default function HeroSection() {
+  const { img } = useSiteImages();
     const handleBookNow = () => {
         // Comportamiento para el botón Book Now
         const el = document.getElementById('contact');
@@ -13,9 +13,9 @@ export default function HeroSection() {
     return (
         <section className="relative w-full">
           <picture>
-            <source srcSet={heroDesktop} media="(min-width: 768px)" />
+            <source srcSet={img('furniture.hero.desktop')} media="(min-width: 768px)" />
             <img
-              src={heroMobile}
+              src={img('furniture.hero.mobile')}
               alt="Cleaning team working in a bright living room"
               className="w-full h-[350px] md:h-[800px] object-cover object-top"
             />

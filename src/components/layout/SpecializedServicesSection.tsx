@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 // All (overview)
 //import furnitureDesktop from "../../assets/furniture-desktop.png";
-import carpetDesktop from "../../assets/carpet-desktop.jpg";
-import tileDesktop from "../../assets/tile-desktop.jpg";
 import UpIcon from "../../assets/upIcon.png";
 
 // Detailed images
@@ -11,16 +9,12 @@ import UpIcon from "../../assets/upIcon.png";
 //import leatherFurniture from "../../assets/leather-furniture.png";
 //import cushionsFurniture from "../../assets/cushions-furniture.png";
 
-import standardCarpet from "../../assets/standard-carpet.jpg";
-import deepCarpet from "../../assets/deep-carpet.jpg";
-import ecoCarpet from "../../assets/eco-carpet.jpg";
 
-import standardTile from "../../assets/standard-tile.jpg";
-import groutTile from "../../assets/grout-tile.jpg";
-import floorTile from "../../assets/floor-tile.jpg";
 
 // Check icon for includes
 import checkServices from "../../assets/check-services.png";
+import { useSiteImages } from '../../context/SiteImagesContext';
+import type { SiteImageKey } from '../../config/siteImages';
 
 type CategoryId = "all" | /*"furniture" |*/ "carpet" | "tile";
 
@@ -39,8 +33,8 @@ type OverviewCard = {
   id: Exclude<CategoryId, "all">;
   title: string;
   description: string;
-  imageDesktop: string;
-  imageMobile: string;
+  imageDesktop: SiteImageKey;
+  imageMobile: SiteImageKey;
   cta: string;
 };
 
@@ -59,8 +53,8 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Carpet Cleaning",
     description:
       "Deep steam cleaning that revives your carpets' color, texture, and softness. Our trained team eliminates dust, allergens, and odors using safe, non-toxic products that leave every space refreshed.",
-    imageDesktop: carpetDesktop,
-    imageMobile: carpetDesktop,
+    imageDesktop: 'specialized.overview.carpet',
+    imageMobile: 'specialized.overview.carpet',
     cta: "Explore Service",
   },
   {
@@ -68,8 +62,8 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Rug Washing",
     description:
       "Off-site immersion washing for area rugs and oriental carpets. We dust, wash, rinse, and controlled-dry every rug to lift years of embedded soil and bring the pile back to life.",
-    imageDesktop: tileDesktop,
-    imageMobile: tileDesktop,
+    imageDesktop: 'specialized.overview.tile',
+    imageMobile: 'specialized.overview.tile',
     cta: "Explore Service",
   },
 ];
@@ -78,7 +72,7 @@ type DetailedCard = {
   category: Exclude<CategoryId, "all">;
   title: string;
   description: string;
-  image: string;
+  image: SiteImageKey;
   includes: string[];
 };
 
@@ -130,7 +124,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Carpet Cleaning",
     description:
       "Deep cleaning that lifts dirt, stains, and odors — leaving carpets fresh, soft, and spotless.",
-    image: standardCarpet,
+    image: 'specialized.carpet.standard',
     includes: [
       "Vacuuming and pre-treatment",
       "Steam extraction cleaning",
@@ -143,7 +137,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Carpet Restoration",
     description:
       "Intensive treatment for worn or heavily soiled carpets, restoring texture, color, and freshness.",
-    image: deepCarpet,
+    image: 'specialized.carpet.deep',
     includes: [
       "Deep fiber shampooing",
       "Heavy stain removal",
@@ -156,7 +150,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Eco-Friendly Carpet Care",
     description:
       "Gentle cleaning with non-toxic products — safe for kids, pets, and sensitive environments.",
-    image: ecoCarpet,
+    image: 'specialized.carpet.eco',
     includes: [
       "Low-moisture steam cleaning",
       "Natural enzyme-based products",
@@ -171,7 +165,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Rug Wash",
     description:
       "A full immersion wash for everyday area rugs — deep soil and odour removal with a gentle, colour-safe process.",
-    image: standardTile,
+    image: 'specialized.tile.standard',
     includes: [
       "Dry soil removal and dusting",
       "Full immersion wash and rinse",
@@ -184,7 +178,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Fringe & Edge Detailing",
     description:
       "Hand detailing for fringes, borders, and worn edges — the areas a general wash always misses.",
-    image: groutTile,
+    image: 'specialized.tile.grout',
     includes: [
       "Fibre and dye stability test",
       "Hand-scrubbed fringes and borders",
@@ -197,7 +191,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Large & Oversized Rugs",
     description:
       "Rotary-machine washing for room-sized and heavy rugs, plus free pickup and delivery across the service area.",
-    image: floorTile,
+    image: 'specialized.tile.floor',
     includes: [
       "Rotary pre-scrub and deep rinse",
       "Fabric protector application",
@@ -223,6 +217,7 @@ const DYNAMIC_TITLES: Record<CategoryId, string> = {
 export default function SpecializedServicesSection({
   initialActive = "all",
 }: ServicesSectionProps) {
+  const { img } = useSiteImages();
   const [active, setActive] = useState<CategoryId>(initialActive);
 
   useEffect(() => {
@@ -359,7 +354,7 @@ export default function SpecializedServicesSection({
                 className="flex flex-col items-start w-full h-full space-y-4"
               >
                 <img
-                  src={card.imageDesktop}
+                  src={img(card.imageDesktop)}
                   alt={card.title}
                   loading="lazy"
                   className="
@@ -425,7 +420,7 @@ export default function SpecializedServicesSection({
                 className="flex flex-col items-start w-full space-y-3 md:space-y-4"
               >
                 <img
-                  src={card.image}
+                  src={img(card.image)}
                   alt={card.title}
                   loading="lazy"
                   className="

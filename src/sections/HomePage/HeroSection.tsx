@@ -1,14 +1,15 @@
 import Navbar from '../../components/layout/Navbar';
-import heroPoster from '../../assets/video-poster.jpg';
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 // Hero estático. El video original de Monkey Cleaning se retiró en el paso
 // white-label; cuando exista un video propio de Demo Cleaning se puede
 // reintroducir un <video> aquí usando esta imagen como poster.
 export default function HeroSection() {
+  const { img } = useSiteImages();
   return (
     <section className="relative w-full bg-gray-900 h-[260px] md:h-[500px] lg:h-[650px] xl:h-[800px]">
       <img
-        src={heroPoster}
+        src={img('home.hero')}
         alt="Carpet cleaning technicians working in a bright living room"
         className="absolute inset-0 w-full h-full object-cover object-top"
       />

@@ -1,34 +1,40 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import residentialImg from '../../assets/residential-img.jpg';
-import commercialImg from '../../assets/commercial-img.jpg';
-import officesImg from '../../assets/offices-img.jpg';
+import { useSiteImages } from '../../context/SiteImagesContext';
+import type { SiteImageKey } from '../../config/siteImages';
 
-const services = [
+const services: {
+  id: number;
+  title: string;
+  description: string;
+  image: SiteImageKey;
+  linkTo: string;
+}[] = [
   {
     id: 1,
     title: 'Residential',
     description: 'In-home carpet and rug cleaning tailored to your lifestyle',
-    image: residentialImg,
+    image: 'home.general.residential',
     linkTo: '/services/general/residential'
   },
   {
     id: 2,
     title: 'Commercial',
     description: 'Carpet cleaning solutions for businesses of all sizes',
-    image: commercialImg,
+    image: 'home.general.commercial',
     linkTo: '/services/general/commercial'
   },
   {
     id: 3,
     title: 'Offices',
     description: 'Fresh office carpet and upholstery that lift the workspace',
-    image: officesImg,
+    image: 'home.general.offices',
     linkTo: '/services/general/offices'
   }
 ];
 
 export default function GeneralServicesSection() {
+  const { img } = useSiteImages();
   const [centerIndex, setCenterIndex] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
@@ -124,7 +130,7 @@ export default function GeneralServicesSection() {
               onClick={() => handleCardClick(service.linkTo, index)}
             >
               <img
-                src={service.image}
+                src={img(service.image)}
                 alt={service.title}
                 loading="lazy"
                 className="w-full h-full object-cover"
@@ -198,7 +204,7 @@ export default function GeneralServicesSection() {
                   borderRadius: isCenter ? '9.25px' : '7.24px'
                 }}
               >
-                <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
+                <img src={img(card.image)} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className={`absolute bottom-0 left-0 right-0 text-white ${isCenter ? 'p-4' : 'p-3'}`}>
                   <h3 className={`font-bold mb-1 ${isCenter ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: 'Montserrat, sans-serif' }}>
