@@ -1,6 +1,7 @@
-import qualityImg from "../../assets/quality-section.jpg";
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 export default function QualitySection() {
+  const { img } = useSiteImages();
   const handleBookNow = () => {
     const el = document.getElementById('contact');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -79,7 +80,7 @@ export default function QualitySection() {
           {/* ===== Right image ===== */}
           <div className="flex justify-center md:justify-end w-full md:w-auto md:shrink-0">
             <img
-              src={qualityImg}
+              src={img('specialized.quality')}
               alt="Quality cleaning"
               loading="lazy"
               className="

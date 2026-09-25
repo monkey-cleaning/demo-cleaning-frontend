@@ -5,6 +5,7 @@ import RequireAdmin from "../components/admin/RequireAdmin";
 import AdminNavbar from '../components/admin/AdminNavbar';
 import HistoryDrawer from "../components/admin/HistoryDrawer";
 import BlogModeSettingsSection from "../components/admin/BlogModeSettingsSection";
+import SiteImagesSettingsSection from "../components/admin/SiteImagesSettingsSection";
 import { BRAND_NAME } from "../config/brand";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -994,6 +995,9 @@ export default function AdminSettingsPage() {
 
                 {/* ── Section: Blog mode (separate API) ─────────────────── */}
                 <BlogModeSettingsSection />
+
+                {/* ── Section: Landing page images (LAB447, separate API) ──── */}
+                <SiteImagesSettingsSection />
 
                 {/* ── Section: Contact & social links ─────────────────────── */}
                 <Section

@@ -1,8 +1,8 @@
-import serviceDesktop from '../../assets/service-desktop.jpg';
-import serviceMobile from '../../assets/service-mobile.jpg';
 import { useNavigate } from 'react-router-dom';
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 export default function ServicesSection() {
+  const { img } = useSiteImages();
   const navigate = useNavigate();
 
   const handleGetQuote = () => {
@@ -88,7 +88,7 @@ export default function ServicesSection() {
           {/* Right Image — scales proportionally within the column */}
           <div className="flex justify-end">
             <img
-              src={serviceDesktop}
+              src={img('home.services.desktop')}
               alt="Professional cleaning team"
               loading="lazy"
               className="w-full max-w-[504px] rounded-[18px] object-cover"
@@ -133,7 +133,7 @@ export default function ServicesSection() {
 
             <div className="flex-shrink-0">
               <img
-                src={serviceMobile}
+                src={img('home.services.mobile')}
                 alt="Professional cleaning team"
                 loading="lazy"
                 className="w-[136px] h-[129px] rounded-[5.57px] object-cover"

@@ -1,34 +1,32 @@
-import satisfactionImage from '../../assets/satisfaction.jpg';
-import onTimeImage from '../../assets/onTime.jpg';
-import ecoFriendlyImage from '../../assets/ecoFriendly.jpg';
-import vettedImage from '../../assets/vetted.jpg';
 import checkIcon from '../../assets/check.png';
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 export default function WhyChooseUsSection() {
+  const { img } = useSiteImages();
   // objectPosition: estas fotos son horizontales/bodegón dentro de una tarjeta
   // vertical con object-cover; sin esto el sujeto (reloj, alfombra, frascos)
   // queda fuera de cuadro.
   const cards = [
     {
-      image: satisfactionImage,
+      image: img('home.why.satisfaction'),
       objectPosition: 'center 68%',
       title: 'Satisfaction Guarantee',
       description: "We're not happy until you're happy. If something's not right, we'll make it right"
     },
     {
-      image: onTimeImage,
+      image: img('home.why.ontime'),
       objectPosition: '34% 58%',
       title: 'On-Time, Every Time',
       description: 'Respect for your schedule is our priority. We arrive on time and work efficiently'
     },
     {
-      image: ecoFriendlyImage,
+      image: img('home.why.eco'),
       objectPosition: 'center 45%',
       title: 'Eco-Friendly Products',
       description: 'We use only certified green cleaning solutions'
     },
     {
-      image: vettedImage,
+      image: img('home.why.vetted'),
       objectPosition: 'center 22%',
       title: 'Vetted Team Members',
       description: 'Rigorous checks and training for every team member'

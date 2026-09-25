@@ -1,6 +1,7 @@
-import affordableImg from "../../assets/affordable-img.jpg";
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 export default function AffordableSection() {
+  const { img } = useSiteImages();
   const handleBookNow = () => {
     const el = document.getElementById('contact');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -77,7 +78,7 @@ export default function AffordableSection() {
           {/* ===== Right image ===== */}
           <div className="flex justify-center md:justify-end w-full md:w-auto md:shrink-0">
             <img
-              src={affordableImg}
+              src={img('blog.affordable')}
               alt="Affordable cleaning"
               loading="lazy"
               className="

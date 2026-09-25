@@ -43,12 +43,14 @@ export async function api<T>(
   const token = localStorage.getItem('admin_blog_token');
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    // Después de ...options: si no, un options.headers reemplazaría todo el
+    // objeto y se perdería el Authorization.
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
-    ...options,
   });
 
   if (!res.ok) {

@@ -1,5 +1,5 @@
-import welcomeDesktop from "../../assets/welcome-specialized.jpg";
 import checkCircle from "../../assets/checksWelcome.png";
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 type Feature = { id: string; label: string };
 
@@ -13,6 +13,7 @@ const FEATURES: Feature[] = [
 ];
 
 export default function WelcomeSection() {
+  const { img } = useSiteImages();
   const handleBookNow = () => {
     const el = document.getElementById('contact');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -26,7 +27,7 @@ export default function WelcomeSection() {
           {/* Imagen izquierda */}
           <div className="flex justify-center md:justify-start md:shrink-0">
             <img
-              src={welcomeDesktop}
+              src={img('specialized.welcome')}
               alt="Cleaning team"
               loading="lazy"
               className="

@@ -1,26 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 // All (overview)
-import residentialDesktop from "../../assets/residential-desktop.jpg";
-import commercialDesktop from "../../assets/commercial-desktop.jpg";
-import officesDesktop from "../../assets/office-desktop.jpg";
 import UpIcon from "../../assets/upIcon.png";
 
 // Detailed images
-import standardResidential from "../../assets/standard-residential-cleaning.jpg";
-import deepResidential from "../../assets/deep-residential-cleaning.jpg";
-import moveResidential from "../../assets/move-residential-cleaning.jpg";
 
-import standardCommercial from "../../assets/standard-commercial-cleaning.jpg";
-import deepCommercial from "../../assets/deep-commercial-cleaning.jpg";
-import moveCommercial from "../../assets/move-commercial-cleaning.jpg";
 
-import standardOffice from "../../assets/standard-office-cleaning.jpg";
-import deepOffice from "../../assets/deep-office-cleaning.jpg";
-import moveOffice from "../../assets/move-office-cleaning.jpg";
 
 // Check icon for includes
 import checkServices from "../../assets/check-services.png";
+import { useSiteImages } from '../../context/SiteImagesContext';
+import type { SiteImageKey } from '../../config/siteImages';
 
 type CategoryId = "all" | "residential" | "commercial" | "offices";
 
@@ -39,8 +29,8 @@ type OverviewCard = {
   id: Exclude<CategoryId, "all">;
   title: string;
   description: string;
-  imageDesktop: string;
-  imageMobile: string;
+  imageDesktop: SiteImageKey;
+  imageMobile: SiteImageKey;
   cta: string;
 };
 
@@ -50,8 +40,8 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Residental Cleaning",
     description:
       "Reliable home cleaning designed around your routine and comfort. Our team ensures every corner shines, from living areas to kitchens, using eco-friendly products that keep your home fresh and safe",
-    imageDesktop: residentialDesktop,
-    imageMobile: residentialDesktop,
+    imageDesktop: 'general.overview.residential',
+    imageMobile: 'general.overview.residential',
     cta: "Book Now",
   },
   {
@@ -59,8 +49,8 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Commercial Cleaning",
     description:
       "Reliable cleaning solutions tailored to your business hours and needs. Our team keeps every space spotless, from floors to high-touch areas ensuring a safe, polished, and welcoming workplace",
-    imageDesktop: commercialDesktop,
-    imageMobile: commercialDesktop,
+    imageDesktop: 'general.overview.commercial',
+    imageMobile: 'general.overview.commercial',
     cta: "Book Now",
   },
   {
@@ -68,8 +58,8 @@ const OVERVIEW_CARDS: OverviewCard[] = [
     title: "Offices Cleaning",
     description:
       "Reliable office cleaning that keeps your workspace organized and fresh. From desks to meeting rooms, our team delivers spotless results using eco-friendly products and attention to every detail",
-    imageDesktop: officesDesktop,
-    imageMobile: officesDesktop,
+    imageDesktop: 'general.overview.offices',
+    imageMobile: 'general.overview.offices',
     cta: "Book Now",
   },
 ];
@@ -78,7 +68,7 @@ type DetailedCard = {
   category: Exclude<CategoryId, "all">;
   title: string;
   description: string;
-  image: string;
+  image: SiteImageKey;
   includes: string[];
 };
 
@@ -89,7 +79,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Cleaning",
     description:
       "Routine maintenance for a spotless home — perfect for weekly or bi-weekly schedules.",
-    image: standardResidential,
+    image: 'general.residential.standard',
     includes: [
       "Dusting and vacuuming all rooms",
       "Wiping kitchen surfaces and appliances",
@@ -102,7 +92,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Cleaning",
     description:
       "A thorough top-to-bottom clean ideal for seasonal refreshes or first-time services.",
-    image: deepResidential,
+    image: 'general.residential.deep',
     includes: [
       "Everything from Standard Cleaning",
       "Inside oven, fridge, and cabinets",
@@ -115,7 +105,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Move In / Move Out",
     description:
       "Detailed cleaning for transitions — ensure every room feels ready, fresh, and inviting.",
-    image: moveResidential,
+    image: 'general.residential.move',
     includes: [
       "All Deep Cleaning tasks",
       "Inside closets, drawers, and storage areas",
@@ -130,7 +120,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Office Cleaning",
     description:
       "Routine maintenance to keep your workspace clean, organized, and ready for the day.",
-    image: standardOffice,
+    image: 'general.offices.standard',
     includes: [
       "Dusting desks, shelves, and office equipment",
       "Vacuuming and mopping floors",
@@ -143,7 +133,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Office Cleaning",
     description:
       "Comprehensive cleaning for a healthier, more refreshing workspace — ideal for quarterly or seasonal service.",
-    image: deepOffice,
+    image: 'general.offices.deep',
     includes: [
       "All Standard Cleaning tasks",
       "Disinfecting keyboards, and shared electronics",
@@ -156,7 +146,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Breakroom & Common Area Care",
     description:
       "Specialized cleaning to prepare your commercial space for reopening or move-in after remodeling.",
-    image: moveOffice,
+    image: 'general.offices.move',
     includes: [
       "Cleaning sinks, counters, and appliances",
       "Wiping tables and seating areas",
@@ -171,7 +161,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Standard Commercial Cleaning",
     description:
       "Regular upkeep to maintain a professional environment — perfect for offices, retail spaces, and small businesses.",
-    image: standardCommercial,
+    image: 'general.commercial.standard',
     includes: [
       "Dusting, vacuuming, and mopping all floors",
       "Trash removal and restroom sanitization",
@@ -184,7 +174,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Deep Commercial Cleaning",
     description:
       "Comprehensive cleaning for businesses needing extra attention — ideal for seasonal refreshes or periodic maintenance.",
-    image: deepCommercial,
+    image: 'general.commercial.deep',
     includes: [
       "All Standard Cleaning tasks",
       "Interior windows and glass partitions",
@@ -197,7 +187,7 @@ const DETAILED_CARDS: DetailedCard[] = [
     title: "Post-Construction / Renovation Cleaning",
     description:
       "Specialized cleaning to prepare your commercial space for reopening or move-in after remodeling.",
-    image: moveCommercial,
+    image: 'general.commercial.move',
     includes: [
       "Removal of dust, paint, and construction debris",
       "Deep cleaning of floors, vents, and fixtures",
@@ -210,6 +200,7 @@ const DETAILED_CARDS: DetailedCard[] = [
 export default function ServicesSection({
   initialActive = "all",
 }: ServicesSectionProps) {
+  const { img } = useSiteImages();
   const [active, setActive] = useState<CategoryId>(initialActive);
 
   useEffect(() => {
@@ -335,7 +326,7 @@ export default function ServicesSection({
               >
                 {/* Image — full width of the column, fixed aspect ratio */}
                 <img
-                  src={card.imageDesktop}
+                  src={img(card.imageDesktop)}
                   alt={card.title}
                   loading="lazy"
                   className="
@@ -401,7 +392,7 @@ export default function ServicesSection({
                 className="flex flex-col items-start w-full space-y-3 md:space-y-4"
               >
                 <img
-                  src={card.image}
+                  src={img(card.image)}
                   alt={card.title}
                   loading="lazy"
                   className="

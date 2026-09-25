@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import carpetImg from '../../assets/carpet-img.jpg';
-import tileImg from '../../assets/tile-img.jpg';
+import { useSiteImages } from '../../context/SiteImagesContext';
+import type { SiteImageKey } from '../../config/siteImages';
 
-const services = [
+const services: {
+  id: number;
+  title: string;
+  description: string;
+  image: SiteImageKey;
+  linkTo: string;
+}[] = [
   /*{
     id: 1,
     title: 'Furniture Cleaning',
@@ -15,19 +21,20 @@ const services = [
     id: 2,
     title: 'Carpet Cleaning',
     description: 'Deep steam cleaning that revives your carpets’ colour and texture',
-    image: carpetImg,
+    image: 'home.specialized.carpet',
     linkTo: '/services/specialized/carpet'
   },
   {
     id: 3,
     title: 'Rug Washing',
     description: 'Off-site immersion washing for area rugs and oriental carpets',
-    image: tileImg,
+    image: 'home.specialized.tile',
     linkTo: '/services/specialized/tile'
   }
 ];
 
 export default function SpecializedServicesSection() {
+  const { img } = useSiteImages();
   const [centerIndex, setCenterIndex] = useState(1);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
@@ -120,7 +127,7 @@ export default function SpecializedServicesSection() {
               onClick={() => handleCardClick(index, service.linkTo)}
             >
               <img
-                src={service.image}
+                src={img(service.image)}
                 alt={service.title}
                 loading="lazy"
                 className="w-full h-full object-cover"
@@ -193,7 +200,7 @@ export default function SpecializedServicesSection() {
                   borderRadius: isCenter ? '9.25px' : '7.24px'
                 }}
               >
-                <img src={card.image} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
+                <img src={img(card.image)} alt={card.title} loading="lazy" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 <div className={`absolute bottom-0 left-0 right-0 text-white ${isCenter ? 'p-4' : 'p-3'}`}>
                   <h3 className={`font-bold mb-1 ${isCenter ? 'text-sm' : 'text-xs'}`} style={{ fontFamily: 'Montserrat, sans-serif' }}>

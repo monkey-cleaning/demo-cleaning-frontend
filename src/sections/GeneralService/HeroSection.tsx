@@ -1,9 +1,9 @@
 import Navbar from '../../components/layout/Navbar';
-import generalDesktop from '../../assets/general-desktop.jpg';
-import generalMobile from '../../assets/general-mobile.jpg';
 import rightIcon from '../../assets/rightIcon.png';
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 export default function HeroSection() {
+  const { img } = useSiteImages();
   const handleBookNow = () => {
     const el = document.getElementById('contact');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -12,9 +12,9 @@ export default function HeroSection() {
   return (
     <section className="relative w-full">
       <picture>
-        <source srcSet={generalDesktop} media="(min-width: 768px)" />
+        <source srcSet={img('general.hero.desktop')} media="(min-width: 768px)" />
         <img
-          src={generalMobile}
+          src={img('general.hero.mobile')}
           alt="Cleaning team working in a bright living room"
           className="w-full h-[350px] md:h-[600px] lg:h-[700px] xl:h-[800px] object-cover object-top"
         />

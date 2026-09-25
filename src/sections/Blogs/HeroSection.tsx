@@ -1,7 +1,6 @@
 import Navbar from "../../components/layout/Navbar";
-import heroDesktop from "../../assets/blog-img.jpg";
-import heroMobile from "../../assets/blog-img-mobile.jpg";
 import checksWelcome from "../../assets/checksWelcome.png";
+import { useSiteImages } from '../../context/SiteImagesContext';
 
 const CHECKS = [
   "Trained, trusted staff",
@@ -11,12 +10,13 @@ const CHECKS = [
 ];
 
 export default function HeroSection() {
+  const { img } = useSiteImages();
   return (
     <section className="relative w-full">
       <picture>
-        <source srcSet={heroDesktop} media="(min-width: 768px)" />
+        <source srcSet={img('blog.hero.desktop')} media="(min-width: 768px)" />
         <img
-          src={heroMobile}
+          src={img('blog.hero.mobile')}
           alt="Cleaning team working in a bright living room"
           className="w-full object-right-top h-[350px] md:h-[600px] lg:h-[700px] xl:h-[800px] object-cover"
         />
