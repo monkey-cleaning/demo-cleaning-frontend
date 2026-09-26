@@ -1,8 +1,8 @@
 // Fuente unica de marca y contacto del frontend.
 //
-// Espeja el patron que ya usa el backend (`process.env.BRAND_NAME || "Demo
-// Cleaning Co."` en src/services/clientQuoteEmailService.js): la env manda y
-// el default deja el fork funcionando sin configurar nada.
+// Espeja el patron que ya usa el backend (`process.env.BRAND_NAME` en
+// src/services/clientQuoteEmailService.js): la env manda y el default deja el
+// fork funcionando sin configurar nada.
 //
 // OJO: las env de Vite se hornean en BUILD TIME, no se leen en runtime. Cambiar
 // VITE_* obliga a rebuild + redeploy del frontend; no basta con reiniciar el
@@ -34,7 +34,7 @@ function formatPhone(digits: string): string {
 }
 
 /** Nombre comercial. Usar siempre esto en vez de escribirlo a mano. */
-export const BRAND_NAME = fromEnv(env.VITE_BRAND_NAME, 'Demo Cleaning Co.');
+export const BRAND_NAME = fromEnv(env.VITE_BRAND_NAME, 'Doctor Carpet Cleaning');
 
 /**
  * Telefono de contacto en digitos E.164 sin '+'.

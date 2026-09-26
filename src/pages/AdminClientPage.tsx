@@ -13,6 +13,7 @@ import {
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import HistoryDrawer from "../components/admin/HistoryDrawer";
+import { BRAND_NAME } from "../config/brand";
 import {
   ClientFormModal,
   clientDisplayName,
@@ -434,7 +435,7 @@ function ClientDrawer({
   const name = clientDisplayName(localClient);
   const isAtRisk = localClient.status === "at_risk" || localClient.status === "inactive";
   const isNoRecontratar = localClient.tags?.includes("Do Not Rehire") ?? false;
-  const message = `Hi ${localClient.first_name ?? name}, it's been ${days ?? "a while"} days since your last service with Demo Cleaning Co. We'd love to schedule your next appointment — reply here or call us anytime! 🧹`;
+  const message = `Hi ${localClient.first_name ?? name}, it's been ${days ?? "a while"} days since your last service with ${BRAND_NAME}. We'd love to schedule your next appointment — reply here or call us anytime! 🧹`;
 
   async function toggleNoRecontratar() {
     const currentTags = localClient.tags ?? [];

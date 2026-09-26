@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import UpIcon from "../../assets/upIcon.png";
 import rightArrowBlogs from "../../assets/arrow-right-blogs.png";
 import { api } from "../../api/client";
+import { BRAND_NAME } from "../../config/brand";
 
 type BlogPost = {
   id: number;
@@ -127,7 +128,7 @@ export default function BlogsSection() {
               w-[290px] md:w-auto
               text-center md:text-left
             ">
-              Sparkle & Shine: The Demo Cleaning Co. Guide{" "}
+              Sparkle & Shine: The {BRAND_NAME} Guide{" "}
             </h2>
           </div>
 

@@ -2,7 +2,7 @@ import Navbar from '../../components/layout/Navbar';
 import { useSiteImages } from '../../context/SiteImagesContext';
 
 // Hero estático. El video original de Monkey Cleaning se retiró en el paso
-// white-label; cuando exista un video propio de Demo Cleaning se puede
+// white-label; cuando exista un video propio de la marca se puede
 // reintroducir un <video> aquí usando esta imagen como poster.
 export default function HeroSection() {
   const { img } = useSiteImages();

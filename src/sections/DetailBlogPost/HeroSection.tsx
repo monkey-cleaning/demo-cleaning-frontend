@@ -1,4 +1,5 @@
 import Navbar from "../../components/layout/Navbar";
+import { BRAND_NAME } from "../../config/brand";
 import checksWelcome from "../../assets/checksWelcome.png";
 import { useSiteImages } from '../../context/SiteImagesContext';
 
@@ -37,7 +38,7 @@ export default function HeroSection() {
             text-[32px] lg:text-[40px] xl:text-[48px]
             max-w-[500px] lg:max-w-[600px] xl:max-w-[692px]
           ">
-            Why Demo Cleaning Co.?
+            Why {BRAND_NAME}?
           </h1>
 
           {/* Subtitle */}
@@ -74,7 +75,7 @@ export default function HeroSection() {
         {/* ================= MOBILE — sin cambios ================= */}
         <div className="md:hidden flex flex-col items-center text-center px-4 pt-1">
           <h1 className="w-[191px] font-montserrat font-semibold text-[16px] leading-[100%] text-[#031634] mb-3 mt-5">
-            Why Demo Cleaning Co.?
+            Why {BRAND_NAME}?
           </h1>
           <p className="w-[240px] font-quicksand font-medium text-[10px] leading-[100%] text-[#1E1E1E] mb-4">
             Reliable, detailed, and eco-conscious cleaning for homes and businesses in Victoria, BC

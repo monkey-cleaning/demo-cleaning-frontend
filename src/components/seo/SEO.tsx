@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { BRAND_NAME } from '../../config/brand';
 
 interface SEOProps {
   title: string;
@@ -7,7 +8,7 @@ interface SEOProps {
 }
 
 export function SEO({ title, description, canonical }: SEOProps) {
-  const fullTitle = `${title} | Demo Cleaning Co.`;
+  const fullTitle = `${title} | ${BRAND_NAME}`;
 
   return (
     <Helmet>

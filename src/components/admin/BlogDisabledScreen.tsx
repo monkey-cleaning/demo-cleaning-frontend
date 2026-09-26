@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { blogAdminCopy as copy } from '../../copy/blogSettings';
 
+/** Content-only screen; parent should provide AdminNavbar + page shell. */
 export default function BlogDisabledScreen() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4 py-16">
       <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center space-y-4">
         <h1 className="text-xl font-montserrat font-bold text-[#031634]">
           {copy.disabledTitle}
