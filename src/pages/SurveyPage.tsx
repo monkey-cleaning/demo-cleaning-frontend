@@ -94,8 +94,8 @@ export default function SurveyPage() {
           if (state.hasClickedReview) {
             setView({
               kind: 'done',
-              title: 'Thanks again! 🎉',
-              message: 'You already left us a rating — we appreciate it.',
+              title: 'Thanks again!',
+              message: 'You already shared your rating with us. We really appreciate it!',
             });
           } else {
             setView({ kind: 'review', state });
@@ -103,9 +103,9 @@ export default function SurveyPage() {
         } else if (state.hasFeedback) {
           setView({
             kind: 'done',
-            title: "We've got your feedback",
+            title: "We've got your feedback, thank you!",
             message:
-              'Thanks — the team already has your comment and is looking at it.',
+              'Our team already has your comment and is taking a good look at it.',
           });
         } else {
           setView({ kind: 'feedbackForm', state });
@@ -128,9 +128,9 @@ export default function SurveyPage() {
       await submitFeedback(token, comment.trim());
       setView({
         kind: 'done',
-        title: 'Thank you — we hear you',
+        title: 'Thank you, we hear you',
         message:
-          "Your feedback went straight to our team. We take it seriously and we'll use it to do better next time.",
+          "Your feedback went straight to our team. Thanks for taking the time, we'll use it to do better next time.",
       });
     } catch {
       setView({
@@ -146,7 +146,7 @@ export default function SurveyPage() {
   if (view.kind === 'loading') {
     return (
       <Shell>
-        <p className="text-navy/60 text-[15px]">Saving your rating…</p>
+        <p className="text-navy/60 text-[15px]">Saving your rating...</p>
       </Shell>
     );
   }
@@ -177,11 +177,11 @@ export default function SurveyPage() {
     return (
       <Shell>
         <h1 className="text-[22px] font-bold text-navy mb-3">
-          You made our day{name ? `, ${name}` : ''}! 🎉
+          You made our day{name ? `, ${name}` : ''}!
         </h1>
         <p className="text-[15px] text-navy/60 leading-relaxed mb-7">
-          Thank you for the 5-star rating. If you have a moment, a quick Google
-          review helps our small local team more than you know.
+          Thank you so much for the 5 stars! If you have a spare minute, a quick
+          Google review helps our small local team more than you know.
         </p>
         <a
           href={goReviewUrl(token)}
@@ -203,11 +203,11 @@ export default function SurveyPage() {
   return (
     <Shell>
       <h1 className="text-[20px] font-bold text-navy mb-3">
-        Thanks{name ? `, ${name}` : ''} — we hear you
+        Thanks{name ? `, ${name}` : ''}, we hear you
       </h1>
       <p className="text-[15px] text-navy/60 leading-relaxed mb-5">
-        We're sorry it wasn't a 5-star experience. We'd really like to understand
-        what we could have done better:
+        We're sorry we didn't hit the mark this time. We'd love to make it right,
+        so tell us what we could have done better:
       </p>
       <form onSubmit={onSubmitFeedback} className="text-left">
         <textarea
