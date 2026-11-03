@@ -15,6 +15,7 @@ import { STAFF_TOKEN_KEY } from '../api/staffClient';
 import { htmlToPlainText } from '../lib/htmlToPlainText';
 
 import { TZ, atOffset } from '../lib/timezone';
+import AddressLink from '../components/AddressLink';
 const HOUR_H = 60; // px per hour at zoom=1 — same base scale as AdminCalendarPage's WeekView/DayView
 const START_H = 0;
 const END_H = 24;
@@ -835,7 +836,7 @@ function EventPopover({
           {event.location && (
             <div className="flex items-start gap-2">
               <MapPin size={15} className="mt-0.5 text-gray-400 flex-shrink-0" />
-              <span>{event.location}</span>
+              <AddressLink address={event.location} />
             </div>
           )}
 

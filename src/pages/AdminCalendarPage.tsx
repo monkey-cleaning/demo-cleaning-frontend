@@ -16,6 +16,7 @@ import { generateCandidateSlots, type RecurrenceInput } from "../api/calendar";
 import { DateTime } from "luxon";
 
 import { TZ } from '../lib/timezone';
+import AddressLink from "../components/AddressLink";
 // Mientras el admin tipea el año en un <input type="date">, el valor pasa por
 // fechas intermedias ("0002-…", "0020-…", "0202-…") válidas para el navegador
 // pero absurdas para el resto del form (pre-checks de conflictos, series
@@ -3097,7 +3098,7 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
           {event.location && (
             <div className="flex items-start gap-3">
               <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">📍</span>
-              <span>{event.location}</span>
+              <AddressLink address={event.location} />
             </div>
           )}
           {event.assignedCleaners.length > 0 && (
