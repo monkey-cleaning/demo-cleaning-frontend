@@ -19,8 +19,10 @@ function fmtCAD(n: number) {
   }).format(n);
 }
 
+// Los eventos vienen en cuartos de hora: con 1 decimal, 2.75h se mostraba como
+// "2.8h". 2 decimales representa cualquier cuarto exacto sin ese redondeo.
 function fmtHours(n: number) {
-  return `${n.toFixed(1)}h`;
+  return `${n.toFixed(2)}h`;
 }
 
 // Mismo criterio que StaffCalendarPage.tsx: la pestaña es explícitamente de
@@ -213,7 +215,9 @@ export default function PayrollSummaryView({
         </div>
       ) : (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        {/* overflow-x-auto: el overflow-hidden del wrapper recortaba columnas en pantallas angostas */}
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
               <th className="font-medium px-4 sm:px-5 py-3"></th>
@@ -271,6 +275,7 @@ export default function PayrollSummaryView({
             })}
           </tbody>
         </table>
+        </div>
       </div>
       )}
     </div>
