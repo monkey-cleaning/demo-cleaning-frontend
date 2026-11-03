@@ -125,8 +125,12 @@ export default function StaffHomePage() {
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {summary?.label} · {summary ? `${summary.from} – ${summary.to}` : ''}
-                  {summary ? ` · ${summary.eventCount} completed job${summary.eventCount === 1 ? '' : 's'}` : ''}
                 </p>
+                {summary && (
+                  <p className="text-xs text-gray-400">
+                    {summary.eventCount} completed job{summary.eventCount === 1 ? '' : 's'}
+                  </p>
+                )}
               </>
             )}
           </div>
