@@ -372,6 +372,7 @@ interface EventSearchResult {
   isAllDay: boolean;
   isPast: boolean; // ← NUEVO
   clientId: string | null;
+  address?: string | null;
   htmlLink: string | null;
 }
 
@@ -683,6 +684,163 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
   }
 );
 TimeSelect.displayName = "TimeSelect";
+
+// Acepta "2", "2.5", "2h", "2 hours", "1h30", "1h30m", "1:30", "90m", "90 min", etc.
+// Devuelve horas (número) o null si no matchea nada.
+function parseDurationInput(raw: string): number | null {
+  const s = raw.trim().toLowerCase();
+  if (!s) return null;
+
+  let m = s.match(/^(\d+):([0-5]?\d)$/);
+  if (m) return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\s*(?:(\d+)\s*(?:m|min|mins|minute|minutes)?)?$/);
+  if (m) return parseFloat(m[1]) + (m[2] ? parseInt(m[2], 10) : 0) / 60;
+
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)$/);
+  if (m) return parseFloat(m[1]) / 60;
+
+  m = s.match(/^(\d+(?:[.,]\d+)?)$/);
+  if (m) return parseFloat(m[1].replace(",", "."));
+
+  return null;
+}
+
+// Igual que las labels de DURATION_OPTIONS ("2 hours") pero para cualquier valor
+// arbitrario tipeado por el usuario (ej "1 hr 40 min").
+function formatDurationLabel(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m} minute${m === 1 ? "" : "s"}`;
+  if (m === 0) return `${h} hour${h === 1 ? "" : "s"}`;
+  return `${h} hr ${m} min`;
+}
+
+// Usa la label del preset si el valor coincide con uno (ej "1.5 hours"),
+// sino formatea el valor custom.
+function formatDurationValue(hours: number): string {
+  const preset = DURATION_OPTIONS.find(o => Math.abs(o.value - hours) < 0.01);
+  return preset ? preset.label : formatDurationLabel(hours);
+}
+
+const DurationSelect = forwardRef<HTMLInputElement, { value: number; onChange: (v: number) => void; className?: string }>(
+  ({ value, onChange, className }, ref) => {
+    const [text, setText] = useState(() => formatDurationValue(value));
+    const [invalid, setInvalid] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [typing, setTyping] = useState(false);
+    const [highlightIdx, setHighlightIdx] = useState(-1);
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => { setText(formatDurationValue(value)); }, [value]);
+
+    useEffect(() => {
+      if (!open) return;
+      function handler(e: MouseEvent) {
+        if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      }
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    // Filtra por prefijo (igual que TimeSelect); si no matchea nada por
+    // prefijo, busca como substring. Sin tipear, muestra la lista completa.
+    const filtered = useMemo(() => {
+      if (!typing) return DURATION_OPTIONS;
+      const q = text.trim().toLowerCase();
+      if (!q) return DURATION_OPTIONS;
+      const starts = DURATION_OPTIONS.filter(o => o.label.toLowerCase().startsWith(q));
+      return starts.length > 0 ? starts : DURATION_OPTIONS.filter(o => o.label.toLowerCase().includes(q));
+    }, [text, typing]);
+
+    useEffect(() => {
+      if (open && listRef.current) {
+        listRef.current.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
+      }
+    }, [open]);
+
+    function selectOption(opt: { value: number; label: string }) {
+      onChange(opt.value);
+      setText(opt.label);
+      setInvalid(false);
+      setOpen(false);
+      setTyping(false);
+    }
+
+    function commit() {
+      const parsed = parseDurationInput(text);
+      if (parsed && parsed > 0) {
+        const clamped = Math.min(parsed, 24);
+        onChange(clamped);
+        setText(formatDurationValue(clamped));
+        setInvalid(false);
+      } else if (text.trim() !== "") {
+        setInvalid(true);
+        setTimeout(() => setInvalid(false), 1200);
+        setText(formatDurationValue(value));
+      } else {
+        setText(formatDurationValue(value));
+      }
+      setOpen(false);
+      setTyping(false);
+    }
+
+    return (
+      <div ref={wrapRef} className={`relative ${(className ?? "").replace(/\bfocus:/g, "focus-within:")}`}>
+        <input
+          ref={ref}
+          type="text"
+          value={text}
+          onChange={e => { setText(e.target.value); setOpen(true); setTyping(true); setHighlightIdx(-1); }}
+          onFocus={() => { setOpen(true); setTyping(false); }}
+          onBlur={() => setTimeout(commit, 120)}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (open && highlightIdx >= 0 && filtered[highlightIdx]) selectOption(filtered[highlightIdx]);
+              else commit();
+            } else if (e.key === "Escape") {
+              setText(formatDurationValue(value));
+              setOpen(false);
+              setTyping(false);
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setOpen(true);
+              setTyping(false);
+              setHighlightIdx(i => Math.min(i + 1, filtered.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHighlightIdx(i => Math.max(i - 1, 0));
+            }
+          }}
+          className={`w-full h-full bg-transparent border-0 outline-none px-0 py-0 transition-shadow duration-300 ${invalid ? "ring-2 ring-red-400 rounded" : ""}`}
+        />
+        {open && filtered.length > 0 && (
+          <div
+            ref={listRef}
+            className="absolute z-50 mt-1 max-h-52 w-full min-w-[110px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg py-1"
+          >
+            {filtered.map((o, i) => (
+              <button
+                key={o.value}
+                type="button"
+                data-active={o.value === value}
+                onMouseDown={e => { e.preventDefault(); selectOption(o); }}
+                className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${o.value === value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700"
+                  } ${i === highlightIdx ? "bg-gray-100" : ""}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+DurationSelect.displayName = "DurationSelect";
 
 // ── LunchFormModal ────────────────────────────────────────────────────────────
 // Simplified modal for creating "Lunch" events (15 min duration, fixed title).
@@ -1039,8 +1197,7 @@ function EventFormModal({
   const [duration, setDuration] = useState(() => {
     if (!duplicateFrom) return 2;
     const hours = (new Date(duplicateFrom.endIso).getTime() - new Date(duplicateFrom.startIso).getTime()) / 3_600_000;
-    const match = DURATION_OPTIONS.find(o => Math.abs(o.value - hours) < 0.01);
-    return match ? match.value : 2;
+    return hours > 0 ? hours : 2;
   });
   const [searchingClient, setSearchingClient] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -1595,9 +1752,7 @@ function EventFormModal({
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1">Duration</label>
-                <select value={duration} onChange={e => setDuration(Number(e.target.value))} className={`${inputCls} bg-white`}>
-                  {DURATION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <DurationSelect value={duration} onChange={setDuration} className={`${inputCls} bg-white`} />
               </div>
             </div>
           )}
@@ -2739,7 +2894,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder="Search events or clients…"
+          placeholder="Search events, clients or addresses…"
           className="w-full pl-8 pr-7 py-1.5 text-sm rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-300 focus:outline-none transition-colors"
         />
         {query && (
@@ -2793,6 +2948,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
                       {ev.summary}
                     </p>
                     <p className="text-xs text-gray-400">{fmtDate(ev.startIso)}</p>
+                    {ev.address && <p className="text-xs text-gray-400 truncate">{ev.address}</p>}
                   </div>
                 </button>
               ))}
