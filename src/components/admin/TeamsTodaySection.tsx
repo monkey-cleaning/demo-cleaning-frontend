@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, ArrowRight } from 'lucide-react';
+import { Users, ArrowRight, CalendarRange } from 'lucide-react';
 import { useTeamsToday, type TeamCard } from '../../hooks/useTeamsToday';
+import TeamsWeekModal from './TeamsWeekModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -111,6 +113,7 @@ function TeamCardItem({ card }: { card: TeamCard }) {
 
 export default function TeamsTodaySection() {
   const { teams, loading, error } = useTeamsToday();
+  const [showWeek, setShowWeek] = useState(false);
 
   // Ocultar tarjeta "Disponibles" si no tiene miembros (CA3: solo aparece si hay)
   const visibleTeams = teams.filter(t => t.teamId !== null || t.members.length > 0);
@@ -123,13 +126,22 @@ export default function TeamsTodaySection() {
           <Users size={15} className="text-gold" />
           Today's Teams
         </h2>
-        <Link
-          to="/admin/staff"
-          className="text-xs text-gold hover:underline flex items-center gap-1"
-        >
-          View staff <ArrowRight size={12} />
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowWeek(true)}
+            className="text-xs text-gold hover:underline flex items-center gap-1"
+          >
+            <CalendarRange size={12} /> View full week
+          </button>
+          <Link
+            to="/admin/staff"
+            className="text-xs text-gold hover:underline flex items-center gap-1"
+          >
+            View staff <ArrowRight size={12} />
+          </Link>
+        </div>
       </div>
+      {showWeek && <TeamsWeekModal onClose={() => setShowWeek(false)} />}
 
       <div className="p-4 sm:p-5">
         {error ? (
