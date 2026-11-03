@@ -799,7 +799,7 @@ function EventPopover({
   return createPortal(
     <div
       ref={ref}
-      className="fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden flex flex-col"
+      className="staff-scope fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden flex flex-col"
       onMouseDown={(e) => e.stopPropagation()}
       style={(() => {
         if (isMobile || !anchorRect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };

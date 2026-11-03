@@ -45,3 +45,14 @@
   outline: 2px solid rgba(59, 130, 246, 0.5); /* blue-500 @ 50% */
   outline-offset: 1px;
 }
+
+/* ── iOS: no agrandar la pantalla al tocar un campo ──────────────────────────
+   Safari en iPhone hace zoom automático al enfocar un input/textarea con
+   font-size < 16px y no vuelve al zoom original al salir del campo. 16px es
+   el umbral de WebKit. La clase repetida sube la especificidad por encima de
+   los bumps `.staff-scope .text-xs` de arriba. */
+.staff-scope.staff-scope input,
+.staff-scope.staff-scope select,
+.staff-scope.staff-scope textarea {
+  font-size: 16px;
+}
