@@ -125,7 +125,12 @@ export function generateCandidateSlots(
   let cursor = start;
   let n = 0;
 
-  while (n < maxCount && cursor <= cap) {
+  if (!start.isValid || !end.isValid || !cap.isValid) return slots;
+
+  // Tope de seguridad: un Start absurdo (p. ej. año 0002 a medio tipear) o un
+  // "until" lejano generaría cientos de miles de slots y congelaría la página.
+  const MAX_SLOTS = 520;
+  while (n < maxCount && n < MAX_SLOTS && cursor <= cap) {
     slots.push({
       startIso: cursor.toISO()!,
       endIso: cursor.plus({ milliseconds: durationMs }).toISO()!,

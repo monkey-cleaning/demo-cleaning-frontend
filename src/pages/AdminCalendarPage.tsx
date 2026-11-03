@@ -15,6 +15,16 @@ import { suggestTeamOverlapFix, suggestTeamOverlapFixForced, suggestOverCapacity
 import { generateCandidateSlots, type RecurrenceInput } from "../api/calendar";
 import { DateTime } from "luxon";
 
+// Mientras el admin tipea el año en un <input type="date">, el valor pasa por
+// fechas intermedias ("0002-…", "0020-…", "0202-…") válidas para el navegador
+// pero absurdas para el resto del form (pre-checks de conflictos, series
+// recurrentes). Solo se consideran "reales" años razonables.
+function isSaneLocalDt(v: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return false;
+  const y = Number(v.slice(0, 4));
+  return y >= 2000 && y <= 2100;
+}
+
 // ── Responsive: mobile breakpoint ───────────────────────────────────────────
 
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 767px)";
@@ -961,6 +971,7 @@ function EventFormModal({
   function handleStartChange(newStart: string) {
     setStartVal(newStart);
     if (!isEdit) return; // create mode ya recalcula End via su propio efecto (duration)
+    if (!isSaneLocalDt(newStart)) return; // año a medio tipear: no recalcular End
     const newEndDate = new Date(new Date(newStart).getTime() + durationMsRef.current);
     const pad = (n: number) => String(n).padStart(2, "0");
     setEndVal(`${newEndDate.getFullYear()}-${pad(newEndDate.getMonth() + 1)}-${pad(newEndDate.getDate())}T${pad(newEndDate.getHours())}:${pad(newEndDate.getMinutes())}`);
@@ -1064,7 +1075,7 @@ function EventFormModal({
   useEffect(() => {
     // Sin equipo asignado no hay nada contra qué comparar (mismo criterio que
     // el backend: teamIdFromColorId(null) siempre devuelve null).
-    if (!colorId || !startVal || endVal <= startVal) { setSeriesConflicts([]); return; }
+    if (!colorId || !isSaneLocalDt(startVal) || !isSaneLocalDt(endVal) || endVal <= startVal) { setSeriesConflicts([]); return; }
 
     setCheckingConflicts(true);
     const timer = setTimeout(async () => {
@@ -1136,7 +1147,7 @@ function EventFormModal({
   const { preferenceCheck: clientPreferenceCheck, loadingPreference: loadingClientPreference } = useClientPreferences(
     !isEdit ? (selectedClient?.id ?? null) : null,
     !isEdit ? summary : "",
-    !isEdit && LOCAL_DT_RE.test(startVal) ? inputToIso(startVal) : "",
+    !isEdit && isSaneLocalDt(startVal) ? inputToIso(startVal) : "",
   );
 
   // LAB309: Duplicate mode — prefill the client picker (and notes/service type)
@@ -1184,7 +1195,7 @@ function EventFormModal({
 
   // Update endVal when start or duration changes
   useEffect(() => {
-    if (!isEdit && LOCAL_DT_RE.test(startVal)) {
+    if (!isEdit && isSaneLocalDt(startVal)) {
       const start = new Date(startVal);
       const end = new Date(start.getTime() + duration * 3_600_000);
       const pad = (n: number) => String(n).padStart(2, "0");
@@ -1233,6 +1244,7 @@ function EventFormModal({
   // or when conflictRefreshKey changes (e.g. after editing a cleaner's schedule).
   useEffect(() => {
     if (!isEdit || !event) return;
+    if (!isSaneLocalDt(startVal) || !isSaneLocalDt(endVal)) return;
     const newStartIso = inputToIso(startVal);
     const newEndIso = inputToIso(endVal);
     setChecking(true);
