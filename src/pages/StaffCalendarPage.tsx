@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DateTime } from 'luxon';
-import { ChevronLeft, ChevronRight, MapPin, Users, Repeat, X, LogOut, ArrowLeft, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Users, Repeat, X, LogOut, ArrowLeft, Send, RefreshCw } from 'lucide-react';
 import {
   getStaffWeekEvents,
   getStaffMonthEvents,
@@ -277,13 +277,31 @@ export default function StaffCalendarPage() {
   // 'week' value is ever reached on a phone. Default is Month per the
   // 2026-09-11 daily — it's what should show "from the moment you open the
   // calendar".
-  const [view, setView] = useState<ViewMode>('month');
+  //
+  // LAB482 - el home linkea una visita puntual como
+  // /staff/calendar?event=<id>&date=<yyyy-mm-dd>. Se lee en el inicializador de
+  // los estados, no en un efecto: asi la pantalla arranca directo en el dia
+  // correcto y hace UNA sola consulta, en vez de pedir el mes de hoy y volver a
+  // pedir el dia un render despues.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedDate = searchParams.get('date');
+  const linkedEventId = useRef(searchParams.get('event'));
+
+  const [view, setView] = useState<ViewMode>(() => (linkedDate ? 'day' : 'month'));
   const effectiveView: ViewMode = isMobile && view === 'week' ? 'day' : view;
-  const [anchor, setAnchor] = useState(() => DateTime.now().setZone(TZ).startOf('day'));
+  const [anchor, setAnchor] = useState(() =>
+    linkedDate
+      ? DateTime.fromISO(linkedDate, { zone: TZ }).startOf('day')
+      : DateTime.now().setZone(TZ).startOf('day')
+  );
   const [events, setEvents] = useState<StaffCalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ event: StaffCalendarEvent; rect?: DOMRect } | null>(null);
+  // LAB482 - recarga a mano. Los eventos salen de Google Calendar y la pantalla
+  // los pide una vez por rango: si la oficina agrega o cambia una visita con la
+  // app abierta, sin esto habia que salir y volver a entrar.
+  const [reloadKey, setReloadKey] = useState(0);
   // Daily 2026-09-11 — pinch-to-zoom on the Day view's hour grid (1 = default).
   const [zoom, setZoom] = useState(1);
   const hourPx = HOUR_H * zoom;
@@ -328,7 +346,24 @@ export default function StaffCalendarPage() {
     // + week/month start) — depending on it instead of the DateTime/ViewMode
     // instances avoids refetching on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeKey]);
+  }, [rangeKey, reloadKey]);
+
+  // LAB482 - ya cargado el dia que pidio el home, se abre la ficha de esa
+  // visita. El id se saca de la URL una sola vez (useRef) y la URL se limpia
+  // enseguida, asi volver atras o recargar no la vuelve a abrir sola.
+  useEffect(() => {
+    if (!linkedEventId.current || loading) return;
+    const id = linkedEventId.current;
+    linkedEventId.current = null;
+    const ev = events.find((e) => e.id === id);
+    if (ev) setSelected({ event: ev });
+  }, [loading, events]);
+
+  useEffect(() => {
+    if (searchParams.has('event') || searchParams.has('date')) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const days = effectiveView === 'week' ? Array.from({ length: 7 }, (_, i) => weekStart.plus({ days: i })) : [anchor];
 
@@ -529,6 +564,12 @@ export default function StaffCalendarPage() {
     setSelected(null);
     setAnchor(DateTime.now().setZone(TZ).startOf('day'));
   }
+  function refresh() {
+    setSelected(null);
+    setLoading(true);
+    setError(null);
+    setReloadKey((k) => k + 1);
+  }
   function changeView(v: ViewMode) {
     setSelected(null);
     setView(v);
@@ -606,6 +647,14 @@ export default function StaffCalendarPage() {
           </button>
           <button onClick={goNext} aria-label="Next" className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500">
             <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            aria-label="Refresh"
+            className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 disabled:text-gray-300"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
           <span className="text-sm font-medium text-[#031634] ml-1">{rangeLabel}</span>
         </div>

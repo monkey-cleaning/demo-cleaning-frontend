@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DateTime } from 'luxon';
-import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, DollarSign, KeyRound } from 'lucide-react';
+import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, DollarSign, KeyRound, RefreshCw } from 'lucide-react';
 import { getStaffDayEvents, type StaffCalendarEvent } from '../api/staffCalendar';
 import { getStaffHoursSummary, type QuincenaPeriod, type StaffHoursSummary } from '../api/staffHours';
 import { STAFF_TOKEN_KEY } from '../api/staffClient';
@@ -24,6 +24,12 @@ export default function StaffHomePage() {
   const [today, setToday] = useState<StaffCalendarEvent[]>([]);
   const [todayLoading, setTodayLoading] = useState(true);
   const [todayError, setTodayError] = useState<string | null>(null);
+
+  // LAB482 - recarga a mano. Los datos vienen de Google Calendar via backend y
+  // la pantalla los pide una sola vez al abrirse: si la oficina agrega o cambia
+  // una visita con la app ya abierta, no habia forma de traerla sin salir y
+  // volver a entrar. Sube de a uno y las dos cargas lo miran.
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [showTimeOff, setShowTimeOff] = useState(false);
   const [showComplaint, setShowComplaint] = useState(false);
@@ -56,7 +62,7 @@ export default function StaffHomePage() {
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, [period, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,7 +80,15 @@ export default function StaffHomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
+
+  function refresh() {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setTodayLoading(true);
+    setTodayError(null);
+    setReloadKey((k) => k + 1);
+  }
 
   const handleLogout = () => {
     localStorage.removeItem(STAFF_TOKEN_KEY);
@@ -85,9 +99,19 @@ export default function StaffHomePage() {
     <div className="min-h-screen bg-gray-50 pb-10">
       <header className="bg-[#031634] text-white px-4 py-3 flex items-center justify-between">
         <h1 className="text-base font-montserrat font-bold">Staff Home</h1>
-        <button onClick={handleLogout} className="flex items-center gap-1 text-xs text-gray-300 hover:text-white">
-          <LogOut size={13} /> Log out
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            disabled={summaryLoading || todayLoading}
+            aria-label="Refresh"
+            className="flex items-center gap-1 text-xs text-gray-300 hover:text-white disabled:text-gray-500"
+          >
+            <RefreshCw size={13} className={summaryLoading || todayLoading ? 'animate-spin' : ''} /> Refresh
+          </button>
+          <button onClick={handleLogout} className="flex items-center gap-1 text-xs text-gray-300 hover:text-white">
+            <LogOut size={13} /> Log out
+          </button>
+        </div>
       </header>
 
       <div className="max-w-xl mx-auto px-4 py-4 space-y-4">
@@ -155,7 +179,13 @@ export default function StaffHomePage() {
                 const start = DateTime.fromISO(ev.startIso, { zone: TZ });
                 const end = DateTime.fromISO(ev.endIso, { zone: TZ });
                 return (
-                  <div key={ev.id} className="flex items-start gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                  // LAB482 - lleva a la visita en el calendario, con su ficha ya
+                  // abierta: desde el home se llegaba a ella recorriendo el mes.
+                  <button
+                    key={ev.id}
+                    onClick={() => navigate(`/staff/calendar?event=${encodeURIComponent(ev.id)}&date=${ev.startDate}`)}
+                    className="w-full text-left flex items-start gap-3 py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 active:bg-gray-100 rounded-md"
+                  >
                     <span className="text-xs font-semibold text-[#031634] w-20 flex-shrink-0 pt-0.5">
                       {ev.isAllDay ? 'All day' : start.toFormat('h:mm a')}
                     </span>
@@ -167,7 +197,8 @@ export default function StaffHomePage() {
                         </p>
                       )}
                     </div>
-                  </div>
+                    <ChevronRight size={14} className="text-gray-300 ml-auto flex-shrink-0 mt-0.5" />
+                  </button>
                 );
               })}
           </div>
