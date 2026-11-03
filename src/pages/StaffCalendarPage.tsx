@@ -14,7 +14,7 @@ import {
 import { STAFF_TOKEN_KEY } from '../api/staffClient';
 import { htmlToPlainText } from '../lib/htmlToPlainText';
 
-const TZ = 'America/Vancouver';
+import { TZ, atOffset } from '../lib/timezone';
 const HOUR_H = 60; // px per hour at zoom=1 — same base scale as AdminCalendarPage's WeekView/DayView
 const START_H = 0;
 const END_H = 24;
@@ -101,8 +101,8 @@ function fmtHour(h: number): string {
 // pinched (reported from a real-device recording), since the floor's size
 // depends on hourPx/zoom.
 function eventHours(event: StaffCalendarEvent, hourPx: number) {
-  const start = DateTime.fromISO(event.startIso, { zone: TZ });
-  const end = DateTime.fromISO(event.endIso, { zone: TZ });
+  const start = atOffset(event.startIso);
+  const end = atOffset(event.endIso);
   const startHour = start.hour + start.minute / 60;
   let trueEndHour = end.hour + end.minute / 60;
   if (trueEndHour <= startHour) trueEndHour = 24; // guard against a zero/negative-length span
@@ -790,8 +790,8 @@ function EventPopover({
     };
   }, [onClose]);
 
-  const start = DateTime.fromISO(event.startIso, { zone: TZ });
-  const end = DateTime.fromISO(event.endIso, { zone: TZ });
+  const start = atOffset(event.startIso);
+  const end = atOffset(event.endIso);
   const dateStr = start.toFormat('cccc, LLLL d');
   const timeStr = event.isAllDay ? 'All day' : `${start.toFormat('h:mm a')} – ${end.toFormat('h:mm a')}`;
   const notes = htmlToPlainText(event.notes);

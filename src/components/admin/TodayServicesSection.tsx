@@ -13,6 +13,7 @@ import { Calendar, ArrowRight, Clock, AlertCircle } from 'lucide-react';
 
 import { type TodayService } from '../../hooks/useOperationalData';
 
+import { TZ } from '../../lib/timezone';
 // ── Service-type badge ────────────────────────────────────────────────────────
 
 const TYPE_BADGE: Record<string, string> = {
@@ -113,7 +114,7 @@ export default function TodayServicesSection({ events, loading, error }: Props) 
           <ul className="divide-y divide-gray-50">
             {visible.map(svc => {
               const startTime = new Date(svc.startIso).toLocaleTimeString("en-CA", {
-                timeZone: "America/Vancouver",
+                timeZone: TZ,
                 hour: "2-digit", minute: "2-digit", hour12: false,
               });
               const durLabel  = svc.durationH > 0

@@ -15,6 +15,7 @@ import { suggestTeamOverlapFix, suggestTeamOverlapFixForced, suggestOverCapacity
 import { generateCandidateSlots, type RecurrenceInput } from "../api/calendar";
 import { DateTime } from "luxon";
 
+import { TZ } from '../lib/timezone';
 // Mientras el admin tipea el año en un <input type="date">, el valor pasa por
 // fechas intermedias ("0002-…", "0020-…", "0202-…") válidas para el navegador
 // pero absurdas para el resto del form (pre-checks de conflictos, series
@@ -160,7 +161,7 @@ function authHeaders() {
 function vanParts(iso: string) {
   const d = new Date(iso);
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Vancouver",
+    timeZone: TZ,
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", hour12: false,
   }).formatToParts(d);
@@ -182,7 +183,7 @@ function vanStringToIso(vanLocal: string): string {
   const asUtc = new Date(vanLocal + "Z");
   if (isNaN(asUtc.getTime())) return "";
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Vancouver",
+    timeZone: TZ,
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   }).formatToParts(asUtc);
@@ -698,7 +699,7 @@ function LunchFormModal({
   function toLocalInput(iso: string): string {
     const d = new Date(iso);
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", hour12: false,
     }).formatToParts(d);
@@ -712,7 +713,7 @@ function LunchFormModal({
     const asUtc = new Date(localVal + "Z");
     if (isNaN(asUtc.getTime())) return "";
     const vanParts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
     }).formatToParts(asUtc);
@@ -900,7 +901,7 @@ function EventFormModal({
   function toLocalInput(iso: string): string {
     const d = new Date(iso);
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", hour12: false,
     }).formatToParts(d);
@@ -918,7 +919,7 @@ function EventFormModal({
     if (isNaN(asUtc.getTime())) return "";
     // Get what Vancouver shows for this UTC instant
     const vanParts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
     }).formatToParts(asUtc);
@@ -1639,7 +1640,7 @@ function EventFormModal({
               </p>
               {seriesConflicts.map((c, i) => (
                 <p key={i} className="text-xs text-amber-700">
-                  {DateTime.fromISO(c.dateIso, { zone: "America/Vancouver" }).toFormat("ccc, LLL d 'at' h:mm a")}: {c.detail}
+                  {DateTime.fromISO(c.dateIso, { zone: TZ }).toFormat("ccc, LLL d 'at' h:mm a")}: {c.detail}
                 </p>
               ))}
               <p className="text-[11px] text-amber-600 mt-1">
@@ -2155,7 +2156,7 @@ function RescheduleModal({ event, newStartIso, newEndIso, onConfirm, onCancel, o
   event: CalEvent; newStartIso: string; newEndIso: string; onConfirm: () => void; onCancel: () => void; onAssign: () => void;
 }) {
   const fmt = (iso: string) => new Date(iso).toLocaleString("en-US", {
-    timeZone: "America/Vancouver",
+    timeZone: TZ,
     weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
   });
 
@@ -2410,7 +2411,7 @@ function ConflictResolutionModal({ type, events, teamOrder, maxSimultaneousTeams
   }
 
   const fmt = (iso: string) => new Date(iso).toLocaleString("en-US", {
-    timeZone: "America/Vancouver", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+    timeZone: TZ, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
   });
 
   function skip() {
@@ -2723,7 +2724,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
   const showDropdown = open && query.trim().length >= 2;
 
   function fmtDate(iso: string) {
-    return DateTime.fromISO(iso, { zone: "America/Vancouver" }).toFormat("ccc, LLL d yyyy");
+    return DateTime.fromISO(iso, { zone: TZ }).toFormat("ccc, LLL d yyyy");
   }
 
   function clear() {
@@ -2846,7 +2847,7 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
 
   const start = new Date(event.startIso);
   const end = new Date(event.endIso);
-  const VAN = "America/Vancouver";
+  const VAN = TZ;
   const dateStr = start.toLocaleDateString("en-CA", { timeZone: VAN, weekday: "long", month: "long", day: "numeric" });
   const timeStr = event.isAllDay ? "All day"
     : `${start.toLocaleTimeString("en-CA", { timeZone: VAN, hour: "numeric", minute: "2-digit" })} – ${end.toLocaleTimeString("en-CA", { timeZone: VAN, hour: "numeric", minute: "2-digit" })}`;
@@ -3000,7 +3001,7 @@ function EventPill({ event, highlightColor, conflictDetail, spotlighted, onEdit,
   }
 
   const start = new Date(event.startIso);
-  const timeLabel = event.isAllDay ? "" : start.toLocaleTimeString("en-CA", { timeZone: "America/Vancouver", hour: "numeric", minute: "2-digit" });
+  const timeLabel = event.isAllDay ? "" : start.toLocaleTimeString("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" });
 
   return (
     <div className="relative" data-event-id={event.id}>
@@ -4820,7 +4821,7 @@ export default function AdminCalendarPage() {
     }
     // After duplicating, jump the visible week/month/day to the new event's date 
     if (duplicatingEvent) {
-      jumpToDate(DateTime.fromISO(saved.startIso).setZone("America/Vancouver").toISODate()!);
+      jumpToDate(DateTime.fromISO(saved.startIso).setZone(TZ).toISODate()!);
     }
     setEditingEvent(null); setCreatingStart(null); setDuplicatingEvent(null); setAssigningEvent(null); setCreatingLunch(false);
   }

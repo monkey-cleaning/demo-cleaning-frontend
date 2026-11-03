@@ -1,5 +1,6 @@
 import type { ConflictableEvent } from "./conflictDetection";
 
+import { TZ } from './timezone';
 export interface ResolvableEvent extends ConflictableEvent {
   createdIso?: string;
 }
@@ -32,7 +33,6 @@ const BUFFER_MIN = 30;            // debe coincidir con BUFFER_MIN_LABEL en Admi
 const BUSINESS_START_HOUR = 8;
 const BUSINESS_END_HOUR = 17;
 const SLOT_STEP_MINUTES = 30;
-const TIMEZONE = "America/Vancouver";
 
 // Tipo mínimo que necesitan estas funciones (CalEvent lo satisface tal cual).
 interface EventLike {
@@ -63,7 +63,7 @@ function overlapsRange(aStart: number, aEnd: number, bStart: number, bEnd: numbe
 
 // Convierte una hora "local" (America/Vancouver) de un día dado a su ISO UTC real,
 // respetando DST. Doble pasada: adivina en UTC, mide el offset real, corrige.
-function zonedTimeToIso(dateStr: string, hour: number, minute: number, timeZone = TIMEZONE): string {
+function zonedTimeToIso(dateStr: string, hour: number, minute: number, timeZone = TZ): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const guessUtcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
   const dtf = new Intl.DateTimeFormat("en-US", {

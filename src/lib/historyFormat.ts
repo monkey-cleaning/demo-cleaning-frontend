@@ -9,6 +9,7 @@ import { DateTime } from "luxon";
 import { User, RefreshCw, Globe, Clock as ClockIcon } from "lucide-react";
 import { htmlToPlainText } from "./htmlToPlainText";
 
+import { TZ } from './timezone';
 export type HistoryEntityType = "appointment" | "client" | "invoice" | "employee" | "payment" | "setting";
 
 export interface HistoryRow {
@@ -37,7 +38,7 @@ export interface HistoryResponse {
   pagination: { page: number; limit: number; total: number; pages: number };
 }
 
-export const VAN = "America/Vancouver";
+export const VAN = TZ;
 
 // Usuarios del panel — debe reflejar TEST_USERS en adminAuthRoutes.js (backend).
 // No hay endpoint para listarlos dinámicamente; es una lista chica y estable.

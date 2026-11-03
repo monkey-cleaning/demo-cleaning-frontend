@@ -9,8 +9,8 @@ import { ChevronLeft, ChevronRight, ChevronDown, RefreshCw, MonitorSmartphone } 
 import type { PayrollSummary, PayrollEmployeeRow } from '../../api/payroll';
 import { type Quincena, quincenaLabel, shiftQuincena, isCurrentOrFuture } from '../../lib/quincena';
 
-const TZ = 'America/Vancouver';
 
+import { TZ } from '../../lib/timezone';
 function fmtCAD(n: number) {
   return new Intl.NumberFormat('en-CA', {
     style: 'currency',

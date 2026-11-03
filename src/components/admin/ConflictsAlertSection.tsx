@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { DateTime } from 'luxon';
 import type { ConflictAlert } from '../../hooks/useOperationalData';
 
-const TZ = 'America/Vancouver';
+import { TZ } from '../../lib/timezone';
 const VISIBLE_LIMIT = 5;
 
 const CONFLICT_LABEL: Record<ConflictAlert['type'], string> = {

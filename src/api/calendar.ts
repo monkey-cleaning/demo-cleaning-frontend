@@ -3,8 +3,8 @@
 // that the existing API client pattern already injects.
 import { DateTime } from "luxon";
 
+import { TZ } from '../lib/timezone';
 const BASE = "/api/calendar";
-const TZ = "America/Vancouver";
 
 // ── Shape returned by calendarController's mapEvent() ────────────────────────
 

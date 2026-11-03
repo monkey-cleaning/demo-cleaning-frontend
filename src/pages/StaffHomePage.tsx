@@ -9,8 +9,8 @@ import TimeOffRequestModal from '../components/staff/TimeOffRequestModal';
 import ComplaintModal from '../components/staff/ComplaintModal';
 import AccountModal from '../components/staff/AccountModal';
 
-const TZ = 'America/Vancouver';
 
+import { TZ } from '../lib/timezone';
 // LAB425 — landing page tras el login de un cleaner. El calendario completo
 // (LAB423) pasa a ser secundario, accesible por botón desde acá.
 export default function StaffHomePage() {
