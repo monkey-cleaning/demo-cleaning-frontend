@@ -25,6 +25,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from "react";
+import TimeSelect from "../TimeSelect";
 import {
   X, Loader2, AlertCircle, Plus, Clock, CalendarOff,
   CheckCircle2, Save, CalendarPlus, Trash2,
@@ -96,12 +97,7 @@ async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
 
 const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const TIME_OPTIONS: string[] = [];
-for (let h = 6; h <= 22; h++) {
-  for (const m of [0, 30]) {
-    TIME_OPTIONS.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-  }
-}
+const timeCls = "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] transition-all";
 
 function formatDate(iso: string) {
   return new Date(iso + "T12:00:00").toLocaleDateString("en-CA", {
@@ -110,28 +106,6 @@ function formatDate(iso: string) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function TimeSelect({
-  value,
-  onChange,
-  min,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  min?: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] transition-all"
-    >
-      {TIME_OPTIONS.filter(t => !min || t > min).map(t => (
-        <option key={t} value={t}>{t}</option>
-      ))}
-    </select>
-  );
-}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
@@ -488,11 +462,13 @@ export function ScheduleEditorModal<T extends EmployeeBase>({
                       <div className="flex items-center gap-2 flex-1 flex-wrap">
                         <span className="text-xs text-gray-500 flex-shrink-0">from</span>
                         <TimeSelect
+                          className={`${timeCls} w-[104px]`}
                           value={slot.start_time}
                           onChange={v => updateSlot(d, "start_time", v)}
                         />
                         <span className="text-xs text-gray-500 flex-shrink-0">to</span>
                         <TimeSelect
+                          className={`${timeCls} w-[104px]`}
                           value={slot.end_time}
                           onChange={v => updateSlot(d, "end_time", v)}
                           min={slot.start_time}
@@ -540,6 +516,7 @@ export function ScheduleEditorModal<T extends EmployeeBase>({
                   <div className="flex-1">
                     <label className="block text-xs text-gray-500 mb-1">From</label>
                     <TimeSelect
+                      className={`${timeCls} w-full`}
                       value={newExtra.start_time}
                       onChange={v => setNewExtra(p => ({ ...p, start_time: v }))}
                     />
@@ -548,6 +525,7 @@ export function ScheduleEditorModal<T extends EmployeeBase>({
                   <div className="flex-1">
                     <label className="block text-xs text-gray-500 mb-1">To</label>
                     <TimeSelect
+                      className={`${timeCls} w-full`}
                       value={newExtra.end_time}
                       onChange={v => setNewExtra(p => ({ ...p, end_time: v }))}
                       min={newExtra.start_time}
@@ -715,6 +693,7 @@ export function ScheduleEditorModal<T extends EmployeeBase>({
                       <div className="flex-1">
                         <label className="block text-xs text-gray-500 mb-1">From</label>
                         <TimeSelect
+                          className={`${timeCls} w-full`}
                           value={newAbsence.start_time}
                           onChange={v => setNewAbsence(p => ({ ...p, start_time: v }))}
                         />
@@ -723,6 +702,7 @@ export function ScheduleEditorModal<T extends EmployeeBase>({
                       <div className="flex-1">
                         <label className="block text-xs text-gray-500 mb-1">To</label>
                         <TimeSelect
+                          className={`${timeCls} w-full`}
                           value={newAbsence.end_time}
                           onChange={v => setNewAbsence(p => ({ ...p, end_time: v }))}
                           min={newAbsence.start_time}
