@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo, for
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen, History as HistoryIcon } from "lucide-react";
 import HistoryDrawer from "../components/admin/HistoryDrawer";
+import PhotoLightbox from "../components/PhotoLightbox";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -267,6 +268,63 @@ async function apiFetchEventNotes(seriesKey: string): Promise<EventNote[]> {
   if (!res.ok) return [];
   const data = await res.json();
   return (data.notes as EventNote[]) ?? [];
+}
+
+// LAB457 — checklist de indicaciones para el evento/serie. El admin es el
+// único que crea/edita/borra items (ver EventFormModal); el check-off y las
+// fotos los carga el staff desde el staff calendar (eventChecklistController.js).
+interface ChecklistItem {
+  id: string;
+  label: string;
+  sort_order: number;
+  /** LAB462 — item del checklist general (se edita en /admin/checklists). */
+  isGeneral: boolean;
+  requirePhoto: boolean;
+  completed: boolean;
+  completedAt: string | null;
+  completedBy?: string | null;
+  photos: { id: string; url: string }[];
+}
+// LAB462 — fotos que el cleaner mandó a central desde esta visita.
+interface CentralSubmissionLite {
+  id: string;
+  sentBy: string | null;
+  comment: string | null;
+  photos: string[];
+  createdAt: string;
+}
+async function apiFetchCentralForEvent(eventId: string): Promise<CentralSubmissionLite[]> {
+  const res = await fetch(`${API_BASE}/api/calendar/central-submissions?eventId=${encodeURIComponent(eventId)}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.submissions as CentralSubmissionLite[]) ?? [];
+}
+async function apiFetchChecklist(seriesKey: string, eventId?: string): Promise<ChecklistItem[]> {
+  const params = new URLSearchParams({ seriesKey, ...(eventId ? { eventId } : {}) });
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist?${params.toString()}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.items as ChecklistItem[]) ?? [];
+}
+async function apiAddChecklistItem(seriesKey: string, label: string, requirePhoto: boolean): Promise<ChecklistItem> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist`, {
+    method: "POST", headers: authHeaders(), body: JSON.stringify({ seriesKey, label, requirePhoto }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  return data.item as ChecklistItem;
+}
+async function apiUpdateChecklistItem(itemId: string, patch: { label: string; requirePhoto: boolean }): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist/${itemId}`, {
+    method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch),
+  });
+  if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
+}
+async function apiArchiveChecklistItem(itemId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist/${itemId}`, {
+    method: "DELETE", headers: authHeaders(),
+  });
+  if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
 }
 
 async function apiFetchEmployee(id: string): Promise<{ id: string; name: string; availability?: unknown[]; time_off?: unknown[]; extra_availability?: unknown[] }> {
@@ -947,6 +1005,27 @@ function EventFormModal({
   // event's description, alongside a hidden "client_id: <uuid>" marker line
   // which we strip out here so the admin only edits the actual notes.
   const [eventNotes, setEventNotes] = useState(() => stripClientIdLine(htmlToPlainText(event?.description ?? duplicateFrom?.description)));
+
+  // LAB457 — checklist de indicaciones para esta serie/evento. Se edita en
+  // memoria acá (id ausente = item nuevo, todavía no persistido) y se
+  // reconcilia contra el backend recién al guardar el evento (handleSubmit),
+  // igual que el resto de los campos del form. checklistOriginal guarda lo
+  // que había al abrir el modal, para poder diffear qué agregar/editar/borrar.
+  const checklistSeriesKey = event?.seriesId || event?.id || null;
+  const [checklistItems, setChecklistItems] = useState<{ id?: string; label: string; requirePhoto: boolean }[]>([]);
+  const checklistOriginal = useRef<{ id: string; label: string; requirePhoto: boolean }[]>([]);
+  useEffect(() => {
+    if (!checklistSeriesKey) return;
+    let cancelled = false;
+    apiFetchChecklist(checklistSeriesKey).then((items) => {
+      if (cancelled) return;
+      const loaded = items.map((i) => ({ id: i.id, label: i.label, requirePhoto: i.requirePhoto }));
+      checklistOriginal.current = loaded;
+      setChecklistItems(loaded);
+    });
+    return () => { cancelled = true; };
+  }, [checklistSeriesKey]);
+
   const [location, setLocation] = useState(event?.location ?? duplicateFrom?.location ?? "");
   const [startVal, setStartVal] = useState(defaultStart);
   const [endVal, setEndVal] = useState(defaultEnd);
@@ -1327,6 +1406,36 @@ function EventFormModal({
       const saved = isEdit
         ? await apiUpdateEvent(event!.id, fullInput, scope)
         : await apiCreateEvent(fullInput);
+
+      // LAB457 — reconcilia la checklist recién ahora que hay un event.id
+      // confirmado (un evento nuevo no lo tiene hasta este punto). Best-effort:
+      // no bloquea el save del evento en sí, mismo criterio que client notes
+      // más abajo. Diff contra checklistOriginal: sin id = alta, id presente
+      // con label distinto = edición, id que ya no está en la lista = borrado.
+      try {
+        const seriesKeyForChecklist = saved.seriesId || saved.id;
+        const originalById = new Map(checklistOriginal.current.map((i) => [i.id, i]));
+        const stillPresent = new Set(checklistItems.filter((i) => i.id).map((i) => i.id));
+        for (const item of checklistItems) {
+          const label = item.label.trim();
+          if (!label) continue;
+          if (!item.id) {
+            await apiAddChecklistItem(seriesKeyForChecklist, label, item.requirePhoto);
+          } else {
+            const before = originalById.get(item.id);
+            if (before?.label !== label || before?.requirePhoto !== item.requirePhoto) {
+              await apiUpdateChecklistItem(item.id, { label, requirePhoto: item.requirePhoto });
+            }
+          }
+        }
+        for (const original of checklistOriginal.current) {
+          if (!stillPresent.has(original.id)) {
+            await apiArchiveChecklistItem(original.id);
+          }
+        }
+      } catch (e: any) {
+        console.warn("Failed to save checklist:", e.message);
+      }
 
       // Save notes (clients table) best-effort — doesn't block the
       // event save if it fails, since it's a secondary write to a different resource.
@@ -1718,6 +1827,54 @@ function EventFormModal({
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1">Event notes</label>
             <textarea rows={4} value={eventNotes} onChange={e => setEventNotes(e.target.value)} placeholder="Notes for this specific visit (e.g. focus on kitchen this week)…" className={`${inputCls} resize-none`} />
+          </div>
+
+          {/* LAB457 — indicaciones para el staff (checklist), con check-off y
+              fotos del lado del staff calendar. */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Extra checklist items for this home</label>
+            <p className="text-[11px] text-gray-400 mb-1.5">
+              Cleaners also get the general checklist on every visit (edit it in Checklists). Items added here only appear for this home.
+            </p>
+            <div className="space-y-1.5">
+              {checklistItems.map((item, idx) => (
+                <div key={item.id ?? `new-${idx}`} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={item.label}
+                    onChange={(e) => setChecklistItems((prev) => prev.map((it, i) => i === idx ? { ...it, label: e.target.value } : it))}
+                    placeholder="e.g. Clean inside the oven"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <label className="flex items-center gap-1 text-[11px] text-gray-500 flex-shrink-0 cursor-pointer" title="The cleaner must add a photo before marking this item as completed">
+                    <input
+                      type="checkbox"
+                      checked={item.requirePhoto}
+                      onChange={(e) => setChecklistItems((prev) => prev.map((it, i) => i === idx ? { ...it, requirePhoto: e.target.checked } : it))}
+                    />
+                    Photo required
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setChecklistItems((prev) => prev.filter((_, i) => i !== idx))}
+                    className="p-1 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                    aria-label="Remove item"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setChecklistItems((prev) => [...prev, { label: "", requirePhoto: false }])}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 transition-colors mt-1"
+              >
+                <Plus size={13} /> Add item for this home
+              </button>
+              {!isEdit && checklistItems.length > 0 && (
+                <p className="text-[11px] text-gray-400">Saved once you create the event.</p>
+              )}
+            </div>
           </div>
         </div>
         <div className="px-6 py-4 flex items-center justify-end gap-2 border-t border-gray-100">
@@ -2891,6 +3048,20 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
   const [deleting, setDeleting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const isMobile = useIsMobile();
+  // Altura real del popover (el checklist y los envíos de cleaners lo alargan
+  // después del primer render), para posicionarlo sin que se corte.
+  const [popH, setPopH] = useState(380);
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  // Natural height = fixed chrome + the scroller's full content height (the
+  // popover itself is clamped by max-height, so offsetHeight alone would never
+  // grow). Runs after every render; the equality guard makes it converge.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const scroller = el?.querySelector<HTMLElement>("[data-pop-scroll]");
+    if (!el || !scroller) return;
+    const natural = el.offsetHeight - scroller.clientHeight + scroller.scrollHeight;
+    if (Math.abs(natural - popH) > 1) setPopH(natural);
+  });
 
   // Notas del cleaner ("para el próximo que le toque esta casa"), agrupadas
   // server-side por seriesId (o el propio id si es un evento suelto). Solo
@@ -2901,6 +3072,30 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
     apiFetchEventNotes(event.seriesId || event.id).then((n) => { if (!cancelled) setNotes(n); });
     return () => { cancelled = true; };
   }, [event.id, event.seriesId]);
+
+  // LAB457 — progreso de la checklist para esta ocurrencia puntual (con fotos
+  // que subió el staff). Solo lectura acá; se edita desde EventFormModal.
+  const [checklist, setChecklist] = useState<ChecklistItem[] | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  // Se refresca solo cada 15s mientras el popover está abierto, para ver lo que
+  // el staff va marcando/subiendo sin tener que cerrar y reabrir.
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      apiFetchChecklist(event.seriesId || event.id, event.id).then((c) => { if (!cancelled) setChecklist(c); });
+    };
+    load(); // first load always runs, even if the tab is in the background
+    const t = setInterval(() => { if (!document.hidden) load(); }, 15_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [event.id, event.seriesId]);
+
+  // LAB462 — fotos que el cleaner mandó a central desde esta visita.
+  const [central, setCentral] = useState<CentralSubmissionLite[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    apiFetchCentralForEvent(event.id).then((c) => { if (!cancelled) setCentral(c); });
+    return () => { cancelled = true; };
+  }, [event.id]);
 
   useEffect(() => {
     function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
@@ -2933,31 +3128,35 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
       // outside RequireAdmin's DOM tree — without this class here, the
       // admin-a11y.css descendant selectors (.admin-scope .text-xs, etc.)
       // never match and the popover silently falls back to default sizes.
-      className="admin-scope fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] overflow-hidden"
+      className="admin-scope fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-16px)] flex flex-col overflow-hidden"
       onMouseDown={e => e.stopPropagation()}
       style={(() => {
         // Mobile: always center in the current viewport, regardless of scroll
         // position — anchoring to the tapped event (like desktop does) puts
         // the popover off-screen for events near the top or bottom edge.
         if (isMobile) return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-        const W = 320; const H = 380; // popover size estimates
+        const W = 320; const H = popH; // measured height (see ResizeObserver above)
         if (!anchorRect) return { top: "50%", left: "50%" };
         // Prefer above the anchor; fall back to below if not enough space
         const spaceAbove = anchorRect.top;
         const spaceBelow = window.innerHeight - anchorRect.bottom;
-        const top = spaceAbove >= H || spaceAbove >= spaceBelow
-          ? Math.max(8, anchorRect.top - H - 8)
-          : Math.min(anchorRect.bottom + 8, window.innerHeight - H - 8);
+        const rawTop = spaceAbove >= H || spaceAbove >= spaceBelow
+          ? anchorRect.top - H - 8
+          : anchorRect.bottom + 8;
+        // Always keep the whole popover inside the viewport.
+        const top = Math.max(8, Math.min(rawTop, window.innerHeight - H - 8));
         // Clamp horizontally
         const left = Math.min(Math.max(8, anchorRect.left), window.innerWidth - W - 8);
-        return { top, left };
+        // maxHeight from `top` guarantees the bottom edge stays visible even if
+        // popH is one render behind; the content area scrolls.
+        return { top, left, maxHeight: `calc(100vh - ${top}px - 8px)` };
       })()}
     >
       {/* Color header strip */}
-      <div className="h-2" style={{ background: event.color }} />
+      <div className="h-2 flex-shrink-0" style={{ background: event.color }} />
 
       {/* Action bar */}
-      <div className="flex items-center justify-end gap-0.5 px-3 pt-2 pb-1">
+      <div className="flex items-center justify-end gap-0.5 px-3 pt-2 pb-1 flex-shrink-0">
         <button onClick={() => { onEdit(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Edit"><Pencil size={15} /></button>
         <button onClick={() => { onAssign(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Assign team"><Users size={15} /></button>
         {/* LAB309: opens NewEvent prefilled with this event's data, date/time left blank */}
@@ -2994,8 +3193,8 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         />
       )}
 
-      {/* Content */}
-      <div className="px-5 pb-5 space-y-3">
+      {/* Content — scrolls when it is taller than the viewport */}
+      <div data-pop-scroll className="px-5 pb-5 space-y-3 overflow-y-auto min-h-0">
         <div>
           <h3 className="text-lg font-medium text-gray-800 leading-snug">{event.summary}</h3>
           <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ background: `${event.color}22`, color: event.color }}>
@@ -3030,6 +3229,80 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
               <p className="text-xs text-gray-500 line-clamp-4 whitespace-pre-line">{stripClientIdLine(htmlToPlainText(event.description))}</p>
             </div>
           )}
+
+          {checklist && checklist.length > 0 && (
+            <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
+              <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">☑️</span>
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setChecklistOpen((v) => !v)}
+                  aria-expanded={checklistOpen}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Checklist ({checklist.filter((i) => i.completed).length}/{checklist.length} completed)
+                  </span>
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${checklistOpen ? "rotate-180" : ""}`} />
+                </button>
+                {checklistOpen && checklist.map((i) => (
+                  <div key={i.id} className="flex items-center gap-2">
+                    <span
+                      className={`w-4 h-4 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] leading-none ${i.completed ? "bg-green-500 text-white" : "border border-gray-300"}`}
+                      aria-label={i.completed ? "Done" : "Pending"}
+                    >
+                      {i.completed && "✓"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs ${i.completed ? "text-gray-500" : "text-gray-700"}`}>
+                        {i.label}
+                        {!i.isGeneral && <span className="ml-1.5 text-[9px] font-semibold uppercase text-amber-700 bg-amber-100 rounded px-1 py-px">This home only</span>}
+                        {i.requirePhoto && <span className="ml-1 text-[9px] font-semibold uppercase text-blue-700 bg-blue-100 rounded px-1 py-px">Photo required</span>}
+                      </p>
+                      {i.completed && i.completedAt && (
+                        <p className="text-[10px] text-green-600">
+                          Done{i.completedBy ? ` by ${i.completedBy}` : ""} · {new Date(i.completedAt).toLocaleTimeString("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1 flex-shrink-0 max-w-[45%]">
+                      {i.photos.map((p) => (
+                        <button key={p.id} type="button" onClick={() => setViewingPhoto(p.url)} aria-label="View photo">
+                          <img src={p.url} alt="" className="w-8 h-8 rounded object-cover border border-gray-200" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {central.length > 0 && (
+            <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
+              <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">📸</span>
+              <div className="space-y-2 min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Received from cleaners ({central.length})</p>
+                {central.map((c) => (
+                  <div key={c.id} className="bg-gray-50 rounded-lg px-2.5 py-1.5">
+                    <p className="text-[10px] text-gray-400">
+                      {c.sentBy ?? "Cleaner"} · {new Date(c.createdAt).toLocaleTimeString("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" })}
+                    </p>
+                    {c.comment && <p className="text-xs text-gray-700 whitespace-pre-line">{c.comment}</p>}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {c.photos.map((url) => (
+                        <button key={url} type="button" onClick={() => setViewingPhoto(url)} aria-label="View photo">
+                          <img src={url} alt="" className="w-10 h-10 rounded object-cover border border-gray-200" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {viewingPhoto && <PhotoLightbox url={viewingPhoto} onClose={() => setViewingPhoto(null)} />}
 
           {notes && notes.length > 0 && (
             <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">

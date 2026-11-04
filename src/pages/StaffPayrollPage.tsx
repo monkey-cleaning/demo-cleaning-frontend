@@ -7,7 +7,7 @@ import { ArrowLeft, LogOut } from 'lucide-react';
 import PayrollSummaryView from '../components/payroll/PayrollSummaryView';
 import { getStaffPayrollSummary, type PayrollSummary } from '../api/payroll';
 import { currentQuincena, type Quincena } from '../lib/quincena';
-import { STAFF_TOKEN_KEY } from '../api/staffClient';
+import { signOutStaff } from '../offline/session';
 
 export default function StaffPayrollPage() {
   const navigate = useNavigate();
@@ -33,9 +33,8 @@ export default function StaffPayrollPage() {
     load();
   }, [load]);
 
-  const handleLogout = () => {
-    localStorage.removeItem(STAFF_TOKEN_KEY);
-    navigate('/staff/login');
+  const handleLogout = async () => {
+    if (await signOutStaff()) navigate('/staff/login');
   };
 
   return (

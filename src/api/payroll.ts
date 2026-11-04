@@ -4,7 +4,7 @@
 // logueado, sin plata — el backend nunca la calcula para ese endpoint, no
 // es un campo que el frontend "esconda").
 import { api } from './client';
-import { staffApi } from './staffClient';
+import { cachedGet } from '../offline/cache';
 import type { Quincena } from '../lib/quincena';
 
 export interface PayrollEventItem {
@@ -67,5 +67,5 @@ export async function getAdminPayrollSummary(q: Quincena): Promise<PayrollSummar
 }
 
 export async function getStaffPayrollSummary(q: Quincena): Promise<PayrollSummary> {
-  return staffApi<PayrollSummary>(`/api/staff/payroll/summary?${queryString(q)}`);
+  return cachedGet<PayrollSummary>(`/api/staff/payroll/summary?${queryString(q)}`);
 }

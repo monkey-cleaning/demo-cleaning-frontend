@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE_URL } from '../api/client';
 import { STAFF_TOKEN_KEY } from '../api/staffClient';
+import { registerStaffServiceWorker } from '../offline/register';
+import { onStaffLogin } from '../offline/session';
 import '../styles/staff-a11y.css';
 
 // LAB423 — calco de AdminLoginPage.tsx pero contra /api/staff/auth/login,
@@ -19,6 +21,11 @@ export default function StaffLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+
+  // LAB463 — visitar el login ya deja el app shell en caché para poder abrirla sin conexión.
+  useEffect(() => {
+    registerStaffServiceWorker();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +50,8 @@ export default function StaffLoginPage() {
         navigate('/admin/');
         return;
       }
+      // LAB463 — si entra otra persona en este dispositivo se borra lo guardado de la anterior.
+      await onStaffLogin(data.token);
       localStorage.setItem(STAFF_TOKEN_KEY, data.token);
       navigate('/staff'); // LAB425 — home nueva; el calendario (LAB423) ahora es secundario
     } catch (err) {
@@ -58,7 +67,7 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <div className="staff-scope min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="staff-scope min-h-dvh flex items-center justify-center bg-gray-50 px-4">
       <form
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-xl shadow-md w-full max-w-[320px] space-y-4"

@@ -25,6 +25,7 @@ import AdminClientsPage from '../pages/AdminClientPage';
 import AdminStaffPage from '../pages/AdminStaffPage';
 import AdminSettingsPage from '../pages/AdminSettingsPage';
 import AdminActivityPage from '../pages/AdminActivityPage';
+import AdminChecklistsPage from '../pages/AdminChecklistsPage';
 import AdminCoverageAlertsPage from '../pages/AdminCoverageAlertsPage';
 import AdminPayrollPage from '../pages/AdminPayrollPage';
 import StaffLoginPage from '../pages/StaffLoginPage';
@@ -92,6 +93,7 @@ export default function AppRouter() {
       <Route path="/admin/staff" element={<AdminStaffPage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
       <Route path="/admin/activity" element={<AdminActivityPage />} />
+      <Route path="/admin/checklists" element={<AdminChecklistsPage />} />
       <Route path="/admin/coverage-alerts" element={<AdminCoverageAlertsPage />} />
       <Route path="/admin/payroll" element={<AdminPayrollPage />} />
       <Route path="/admin" element={<AdminDashboardPage />} />

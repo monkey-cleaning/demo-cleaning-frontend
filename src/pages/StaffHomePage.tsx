@@ -4,13 +4,14 @@ import { DateTime } from 'luxon';
 import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, KeyRound, RefreshCw } from 'lucide-react';
 import { getStaffDayEvents, type StaffCalendarEvent } from '../api/staffCalendar';
 import { getStaffHoursSummary, type QuincenaPeriod, type StaffHoursSummary } from '../api/staffHours';
-import { STAFF_TOKEN_KEY } from '../api/staffClient';
+import { signOutStaff } from '../offline/session';
 import TimeOffRequestModal from '../components/staff/TimeOffRequestModal';
 import ComplaintModal from '../components/staff/ComplaintModal';
 import AccountModal from '../components/staff/AccountModal';
 
 
-import { TZ } from '../lib/timezone';
+import { TZ, atOffset } from '../lib/timezone';
+import InstallAppCard from '../components/staff/InstallAppCard';
 // LAB425 — landing page tras el login de un cleaner. El calendario completo
 // (LAB423) pasa a ser secundario, accesible por botón desde acá.
 export default function StaffHomePage() {
@@ -90,13 +91,12 @@ export default function StaffHomePage() {
     setReloadKey((k) => k + 1);
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem(STAFF_TOKEN_KEY);
-    navigate('/staff/login');
+  const handleLogout = async () => {
+    if (await signOutStaff()) navigate('/staff/login');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-dvh bg-gray-50 pb-10">
       <header className="bg-[#031634] text-white px-4 py-3 flex items-center justify-between">
         <h1 className="text-base font-montserrat font-bold">Staff Home</h1>
         <div className="flex items-center gap-3">
@@ -113,6 +113,10 @@ export default function StaffHomePage() {
           </button>
         </div>
       </header>
+
+        {/* LAB463 — el aviso de instalar de Chrome desaparece si se toca afuera;
+            este botón queda siempre a mano hasta que la app esté instalada. */}
+        <InstallAppCard />
 
       <div className="max-w-xl mx-auto px-4 py-4 space-y-4">
         {/* ── Hours this quincena ─────────────────────────────────────────── */}
@@ -176,8 +180,8 @@ export default function StaffHomePage() {
             {!todayLoading &&
               !todayError &&
               today.map((ev) => {
-                const start = DateTime.fromISO(ev.startIso, { zone: TZ });
-                const end = DateTime.fromISO(ev.endIso, { zone: TZ });
+                const start = atOffset(ev.startIso);
+                const end = atOffset(ev.endIso);
                 return (
                   // LAB482 - lleva a la visita en el calendario, con su ficha ya
                   // abierta: desde el home se llegaba a ella recorriendo el mes.

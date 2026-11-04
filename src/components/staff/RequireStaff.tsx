@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { staffApi } from '../../api/staffClient';
+import { staffApi, isAuthError, STAFF_TOKEN_KEY } from '../../api/staffClient';
+import { startStaffOffline } from '../../offline/register';
+import OfflineBanner from './OfflineBanner';
 import '../../styles/staff-a11y.css';
 
 // LAB423 — calco de components/admin/RequireAdmin.tsx pero validando la
@@ -20,11 +22,20 @@ export default function RequireStaff({ children }: Props) {
   useEffect(() => {
     const check = async () => {
       try {
-        await staffApi('/api/staff/auth/me');
+        await staffApi('/api/staff/auth/me', {}, 6000);
         setOk(true);
-      } catch {
-        setOk(false);
-        navigate('/staff/login', { state: { from: location.pathname } });
+        startStaffOffline();
+      } catch (e) {
+        // LAB463 — sin conexión (o backend caído) la sesión se mantiene: el token
+        // guardado sigue valiendo y se muestran los datos guardados. Solo un 401
+        // del servidor cierra la sesión.
+        if (localStorage.getItem(STAFF_TOKEN_KEY) && !isAuthError(e)) {
+          setOk(true);
+          startStaffOffline();
+        } else {
+          setOk(false);
+          navigate('/staff/login', { state: { from: location.pathname } });
+        }
       } finally {
         setChecking(false);
       }
@@ -43,5 +54,10 @@ export default function RequireStaff({ children }: Props) {
 
   if (!ok) return null;
 
-  return <div className="staff-scope">{children}</div>;
+  return (
+    <div className="staff-scope staff-safe-area">
+      <OfflineBanner />
+      {children}
+    </div>
+  );
 }
