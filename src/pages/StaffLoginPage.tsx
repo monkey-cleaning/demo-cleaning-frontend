@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE_URL } from '../api/client';
 import { STAFF_TOKEN_KEY } from '../api/staffClient';
 import '../styles/staff-a11y.css';
@@ -14,6 +15,9 @@ export default function StaffLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // LAB483 — ver la contraseña que se está tipeando, y sesión larga opcional.
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,16 +29,29 @@ export default function StaffLoginPage() {
       const res = await fetch(`${API_BASE_URL}/api/staff/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, rememberMe }),
       });
 
       if (!res.ok) throw new Error('Login failed');
 
       const data = await res.json();
+      // Cross-login: si son credenciales de admin, el backend las acepta acá y
+      // devuelve role:'blog-admin'; hay que guardar el token bajo la key de
+      // admin y mandarlo a /admin/. Espejo en AdminLoginPage.tsx.
+      if (data.role === 'blog-admin') {
+        localStorage.setItem('admin_blog_token', data.token);
+        navigate('/admin/');
+        return;
+      }
       localStorage.setItem(STAFF_TOKEN_KEY, data.token);
       navigate('/staff'); // LAB425 — home nueva; el calendario (LAB423) ahora es secundario
-    } catch {
-      setError('Incorrect username or password');
+    } catch (err) {
+      // fetch() que ni llegó al servidor (TypeError) = sin conexión, no contraseña mala.
+      setError(
+        err instanceof TypeError || navigator.onLine === false
+          ? "You're offline. Connect to the internet to sign in."
+          : 'Incorrect username or password'
+      );
     } finally {
       setLoading(false);
     }
@@ -62,15 +79,41 @@ export default function StaffLoginPage() {
         </div>
 
         <div>
-          <label className="block text-sm mb-1">Password</label>
-          <input
-            type="password"
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
+          <label className="block text-sm mb-1" htmlFor="staff-password">Password</label>
+          <div className="relative">
+            <input
+              id="staff-password"
+              type={showPassword ? 'text' : 'password'}
+              className="w-full border rounded-md px-3 py-2 pr-11 text-sm"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
+
+        <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="mt-0.5 w-4 h-4"
+          />
+          <span>
+            Keep me signed in
+            <span className="block text-gray-400">
+              Otherwise you stay signed in on this phone for 30 days.
+            </span>
+          </span>
+        </label>
 
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
 
