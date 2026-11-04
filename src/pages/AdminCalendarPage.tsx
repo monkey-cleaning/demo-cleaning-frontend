@@ -13,6 +13,11 @@ import { ClientFormModal, clientDisplayName, type Client } from "../components/a
 import { findTeamOverlaps, findOverCapacity, findLunchIssues, type LunchIssueFlag } from "../lib/conflictDetection";
 import { suggestTeamOverlapFix, suggestTeamOverlapFixForced, suggestOverCapacityFix, groupOverCapacityClusters, isLunchSummary, type TeamOverlapSuggestion, type OverCapacitySuggestion } from "../lib/conflictResolution";
 import { generateCandidateSlots, type RecurrenceInput } from "../api/calendar";
+import RecurrenceCustomModal from "../components/admin/RecurrenceCustomModal";
+import {
+  defaultCustomPattern, describePattern, firstMatchingDate, fitError, modeFromSeries, modeLabel, patternFromMode,
+  type CustomPattern, type RepeatMode, type SeriesRecurrenceInfo,
+} from "../lib/recurrence";
 import { DateTime } from "luxon";
 
 import { TZ } from '../lib/timezone';
@@ -236,13 +241,6 @@ async function apiUpdateEvent(
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return normalizeEvent(data.event as CalEvent);
-}
-
-interface SeriesRecurrenceInfo {
-  freq: "WEEKLY" | "BIWEEKLY" | "MONTHLY";
-  endType: "never" | "count" | "until";
-  count: number | null;
-  until: string | null; // ISO date
 }
 
 async function apiFetchSeriesRecurrence(masterId: string): Promise<SeriesRecurrenceInfo | null> {
@@ -1033,8 +1031,14 @@ function EventFormModal({
   const [searchingClient, setSearchingClient] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
 
-  const [recurrenceFreq, setRecurrenceFreq] = useState<"" | "WEEKLY" | "BIWEEKLY" | "MONTHLY">("");
-  const [recurrenceEndType, setRecurrenceEndType] = useState<"never" | "count" | "until">("never");
+  // LAB617: presets (Weekly / Every 2 weeks / Monthly = cada 4 semanas) + "Custom…".
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("");
+  const [customPattern, setCustomPattern] = useState<CustomPattern | null>(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const modeBeforeCustomRef = useRef<RepeatMode>("");
+  // Serie que el panel no sabe editar (p. ej. diaria): se muestra, no se reescribe.
+  const [unsupportedRule, setUnsupportedRule] = useState<string | null>(null);
+  const [recurrenceEndType, setRecurrenceEndType] = useState<"year" | "never" | "count" | "until">("year");
   const [recurrenceCount, setRecurrenceCount] = useState(10);
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
   const [recurrenceTouched, setRecurrenceTouched] = useState(false);
@@ -1048,7 +1052,10 @@ function EventFormModal({
     apiFetchSeriesRecurrence(event.seriesId)
       .then(info => {
         if (cancelled || !info) return;
-        setRecurrenceFreq(info.freq);
+        const { mode, custom } = modeFromSeries(info, startVal.slice(0, 10));
+        setRepeatMode(mode);
+        setCustomPattern(custom);
+        if (mode === "UNSUPPORTED") setUnsupportedRule(info.raw ?? null);
         setRecurrenceEndType(info.endType);
         if (info.count) setRecurrenceCount(info.count);
         if (info.until) setRecurrenceUntil(info.until);
@@ -1057,6 +1064,25 @@ function EventFormModal({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const recurrencePattern = useMemo(() => patternFromMode(repeatMode, customPattern), [repeatMode, customPattern]);
+  // En una serie ya existente la fecha del form es la de la instancia, no la
+  // del inicio real de la serie: ahí valida el backend (contra el DTSTART).
+  const recurrenceFitError = useMemo(
+    () => (recurrencePattern && !(isEdit && isPartOfSeries) ? fitError(recurrencePattern, startVal.slice(0, 10)) : null),
+    [recurrencePattern, isEdit, isPartOfSeries, startVal],
+  );
+
+  function onRepeatModeChange(next: RepeatMode) {
+    if (next === "CUSTOM") {
+      modeBeforeCustomRef.current = repeatMode;
+      if (!customPattern) setCustomPattern(defaultCustomPattern(startVal.slice(0, 10)));
+      setShowCustomModal(true);
+      return;
+    }
+    setRecurrenceTouched(true);
+    setRepeatMode(next);
+  }
 
   const [seriesConflicts, setSeriesConflicts] = useState<{ dateIso: string; type: string; detail: string }[]>([]);
   const [checkingConflicts, setCheckingConflicts] = useState(false);
@@ -1068,9 +1094,9 @@ function EventFormModal({
 
     setCheckingConflicts(true);
     const timer = setTimeout(async () => {
-      const slots = (!isEdit && recurrenceFreq)
+      const slots = (!isEdit && recurrencePattern)
         ? generateCandidateSlots(inputToIso(startVal), inputToIso(endVal), {
-          freq: recurrenceFreq,
+          ...recurrencePattern,
           ...(recurrenceEndType === "count" && { count: recurrenceCount }),
           ...(recurrenceEndType === "until" && recurrenceUntil && { until: recurrenceUntil }),
         })
@@ -1084,7 +1110,7 @@ function EventFormModal({
       setCheckingConflicts(false);
     }, 400);
     return () => { clearTimeout(timer); setCheckingConflicts(false); };
-  }, [isEdit, recurrenceFreq, recurrenceEndType, recurrenceCount, recurrenceUntil, startVal, endVal, colorId, event?.id, event?.seriesId]);
+  }, [isEdit, recurrencePattern, recurrenceEndType, recurrenceCount, recurrenceUntil, startVal, endVal, colorId, event?.id, event?.seriesId]);
   // notes — permanent notes about the client & the cleaning location
   // (door codes, property specs). Prefilled from DB, editable here, saved
   // back to the clients row (independent of the calendar event save).
@@ -1251,21 +1277,26 @@ function EventFormModal({
     if (!LOCAL_DT_RE.test(startVal) || !LOCAL_DT_RE.test(endVal)) { setError("Pick both a start date and a start time"); return; }
     if (endVal <= startVal) { setError("End time must be after start"); return; }
 
-    const includeRecurrence = !!recurrenceFreq && (!isEdit || !isPartOfSeries || recurrenceTouched);
+    const includeRecurrence = !!recurrencePattern && (!isEdit || !isPartOfSeries || recurrenceTouched);
+    if (includeRecurrence && recurrenceFitError) {
+      setError(`${recurrenceFitError} Change the start date or the pattern.`);
+      return;
+    }
 
     // LAB-233: editing an occurrence that belongs to a series — ask the admin
     // whether the change should apply to just this event or the whole series,
     // before doing any network work. Re-entered with the chosen scope once
     // RecurrenceScopeModal calls back.
     if (isEdit && event?.seriesId && !pendingScopeChoice) {
-      if (includeRecurrence) {
-        // Un cambio de patrón solo tiene sentido para toda la serie —
-        // se salta el picker de single/following/all.
-        scope = "all";
-      } else {
-        setPendingScopeChoice(true);
-        return;
-      }
+      // Un cambio de patrón arranca en "este y los siguientes" (lo anterior no
+      // se toca); el picker no ofrece "solo este" ni "toda la serie" en ese caso.
+      setPendingScopeChoice(true);
+      return;
+    }
+    if (includeRecurrence && isEdit && isPartOfSeries && scope === "following") {
+      // "Este y los siguientes" arranca en la fecha de esta instancia: el patrón tiene que calzar ahí.
+      const fit = fitError(recurrencePattern!, startVal.slice(0, 10));
+      if (fit) { setError(`${fit} Change the start date or the pattern.`); return; }
     }
 
     setSaving(true); setError(null);
@@ -1286,7 +1317,8 @@ function EventFormModal({
         ...(serviceType && { serviceType }),
         ...(includeRecurrence && {
           recurrence: {
-            freq: recurrenceFreq,
+            ...recurrencePattern!,
+            ...(recurrenceEndType === "never" && { endless: true }),
             ...(recurrenceEndType === "count" && { count: recurrenceCount }),
             ...(recurrenceEndType === "until" && recurrenceUntil && { until: inputToIso(`${recurrenceUntil}T23:59`) }),
           },
@@ -1505,24 +1537,58 @@ function EventFormModal({
             ) : (
               <>
                 <select
-                  value={recurrenceFreq}
-                  onChange={e => { setRecurrenceFreq(e.target.value as any); setRecurrenceTouched(true); }}
+                  value={repeatMode}
+                  onChange={e => onRepeatModeChange(e.target.value as RepeatMode)}
                   className={`${inputCls} bg-white`}
                 >
                   <option value="">Does not repeat</option>
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="BIWEEKLY">Every 2 weeks</option>
-                  <option value="MONTHLY">Monthly</option>
+                  <option value="WEEKLY">{modeLabel("WEEKLY")}</option>
+                  <option value="BIWEEKLY">{modeLabel("BIWEEKLY")}</option>
+                  <option value="EVERY_4_WEEKS">{modeLabel("EVERY_4_WEEKS")}</option>
+                  <option value="CUSTOM">{modeLabel("CUSTOM")}</option>
+                  {repeatMode === "UNSUPPORTED" && <option value="UNSUPPORTED" disabled>{modeLabel("UNSUPPORTED")}</option>}
                 </select>
 
-                {recurrenceFreq && (
+                {repeatMode === "CUSTOM" && recurrencePattern && (
+                  <p className="text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+                    <span>{describePattern(recurrencePattern)}</span>
+                    <button
+                      type="button"
+                      onClick={() => { modeBeforeCustomRef.current = repeatMode; setShowCustomModal(true); }}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </p>
+                )}
+                {repeatMode === "UNSUPPORTED" && (
+                  <p className="text-[11px] text-gray-400 break-all">
+                    This series uses a pattern the panel can't edit{unsupportedRule ? ` (${unsupportedRule.replace(/^RRULE:/, "")})` : ""}.
+                    Choose another option above to replace it for the whole series.
+                  </p>
+                )}
+                {recurrenceFitError && recurrencePattern && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-1">
+                    <p className="text-xs text-amber-700">{recurrenceFitError} Change the start date or the pattern.</p>
+                    <button
+                      type="button"
+                      onClick={() => handleStartChange(`${firstMatchingDate(recurrencePattern, startVal.slice(0, 10))}T${startVal.slice(11)}`)}
+                      className="text-xs font-medium text-amber-800 underline hover:text-amber-900"
+                    >
+                      Move the start to {DateTime.fromISO(firstMatchingDate(recurrencePattern, startVal.slice(0, 10)), { zone: "utc" }).setLocale("en").toFormat("ccc, LLL d")}
+                    </button>
+                  </div>
+                )}
+
+                {repeatMode && repeatMode !== "UNSUPPORTED" && (
                   <div className="space-y-2">
                     <select
                       value={recurrenceEndType}
                       onChange={e => { setRecurrenceEndType(e.target.value as any); setRecurrenceTouched(true); }}
                       className={`${inputCls} bg-white`}
                     >
-                      <option value="never">Ends after 1 year (default)</option>
+                      <option value="year">Ends after 1 year (default)</option>
+                      <option value="never">Never</option>
                       <option value="count">Ends after N occurrences</option>
                       <option value="until">Ends on date</option>
                     </select>
@@ -1540,10 +1606,24 @@ function EventFormModal({
                 )}
 
                 {isEdit && isPartOfSeries && recurrenceTouched && (
-                  <p className="text-[11px] text-amber-600">This changes the pattern for the whole series ("All recurring events").</p>
+                  <p className="text-[11px] text-amber-600">You'll choose whether the new pattern applies from this event on or to the whole series.</p>
                 )}
-                {isEdit && !isPartOfSeries && recurrenceFreq && (
+                {isEdit && !isPartOfSeries && repeatMode && (
                   <p className="text-[11px] text-gray-400">This turns this event into a recurring series starting now.</p>
+                )}
+                {showCustomModal && customPattern && (
+                  <RecurrenceCustomModal
+                    initial={customPattern}
+                    startDate={startVal.slice(0, 10)}
+                    onSave={p => {
+                      setCustomPattern(p);
+                      setRepeatMode("CUSTOM");
+                      setRecurrenceTouched(true);
+                      setShowCustomModal(false);
+                    }}
+                    onCancel={() => { setRepeatMode(modeBeforeCustomRef.current); setShowCustomModal(false); }}
+                    onMoveStart={date => handleStartChange(`${date}T${startVal.slice(11)}`)}
+                  />
                 )}
               </>
             )}
@@ -1655,6 +1735,7 @@ function EventFormModal({
         {pendingScopeChoice && (
           <RecurrenceScopeModal
             action="save"
+            patternChange={isEdit && isPartOfSeries && recurrenceTouched && !!recurrencePattern}
             onConfirm={(scope) => { setPendingScopeChoice(false); handleSubmit(scope); }}
             onCancel={() => setPendingScopeChoice(false)}
           />
@@ -1675,9 +1756,11 @@ function EventFormModal({
 // ── RecurrenceScopeModal ────────────────────────────────────────────────────────────
 
 function RecurrenceScopeModal({
-  action, onConfirm, onCancel, hideAllOption = false,
+  action, patternChange = false, onConfirm, onCancel, hideAllOption = false,
 }: {
   action: "save" | "delete";
+  /** Se está cambiando cómo se repite la serie: solo "este y los siguientes" aplica. */
+  patternChange?: boolean;
   onConfirm: (scope: "single" | "following" | "all") => void;
   onCancel: () => void;
   // Oculta "all recurring events" — p. ej. al arrastrar/reprogramar una
@@ -1690,18 +1773,22 @@ function RecurrenceScopeModal({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
         <h3 className="font-medium text-gray-800">This is a recurring event</h3>
         <p className="text-sm text-gray-500">
-          {hideAllOption
+          {patternChange
+            ? "The new repeat pattern starts at this event. Events before this one are not changed."
+            : hideAllOption
             ? "Choose whether this applies to just this occurrence or this and future ones."
             : "Choose whether this applies to just this occurrence, this and future ones, or all recurring events."}
         </p>
         <div className="space-y-2">
-          <button onClick={() => onConfirm("single")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
-            {verb} — this event only
-          </button>
+          {!patternChange && (
+            <button onClick={() => onConfirm("single")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
+              {verb} — this event only
+            </button>
+          )}
           <button onClick={() => onConfirm("following")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
             {verb} — this and following events
           </button>
-          {!hideAllOption && (
+          {!hideAllOption && !patternChange && (
             <button onClick={() => onConfirm("all")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
               {verb} — all recurring events
             </button>
