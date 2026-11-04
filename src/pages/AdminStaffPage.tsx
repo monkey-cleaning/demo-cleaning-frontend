@@ -4,7 +4,7 @@ import {
   Plus, Search, X, ChevronLeft, ChevronRight,
   Phone, Mail, Pencil, Loader2, AlertCircle, RefreshCw,
   Shield, Car, CalendarOff, DollarSign,
-  CalendarDays, Clock, History,
+  CalendarDays, Clock, History, KeyRound, Eye, EyeOff,
 } from "lucide-react";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import { ScheduleEditorModal } from "../components/admin/ScheduleEditorModal";
@@ -29,6 +29,8 @@ interface Employee {
   gender: "male" | "female" | "other" | null;
   created_at: string | null;
   updated_at: string | null;
+  /** LAB484 — su usuario de la app; null si todavia no tiene acceso. */
+  username?: string | null;
   // populated by getEmployee
   availability?: AvailabilityRow[];
   time_off?: TimeOffRow[];
@@ -78,6 +80,9 @@ interface EmployeeFormData {
   e_transfer_email: string;
   notes: string;
   gender: "" | "male" | "female" | "other";
+  /** LAB484 — acceso a la app. Obligatorio en el alta, no se edita desde aca. */
+  username: string;
+  password: string;
 }
 
 interface Pagination { page: number; pages: number; total: number; limit: number; }
@@ -201,6 +206,7 @@ const EMPTY_FORM: EmployeeFormData = {
   has_license: false, is_team_leader: false,
   e_transfer_email: "", notes: "",
   gender: "",
+  username: "", password: "",
 };
 
 // ── DAY STATUS BADGE ──────────────────────────────────────────────────────────
@@ -433,10 +439,14 @@ function EmployeeFormModal({
       e_transfer_email: employee.e_transfer_email ?? "",
       notes: employee.notes ?? "",
       gender: employee.gender ?? "",
+      // El acceso no se edita desde el modal: van vacios y no se mandan.
+      username: "",
+      password: "",
     } : { ...EMPTY_FORM }
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const set = (k: keyof EmployeeFormData, v: string | boolean) =>
     setForm(p => ({ ...p, [k]: v }));
@@ -453,10 +463,23 @@ function EmployeeFormModal({
     if (!form.hourly_travel_rate || isNaN(parseFloat(form.hourly_travel_rate))) {
       setError("Travel rate is required"); return;
     }
+    // LAB484 — el acceso se crea junto con la cleaner y solo en el alta: una
+    // cuenta ya creada se edita desde la app, no desde aca. El backend valida
+    // lo mismo (y ademas que el usuario no este tomado).
+    if (!isEdit) {
+      if (!/^[a-z0-9._-]{3,30}$/i.test(form.username.trim())) {
+        setError("Username must be 3-30 characters: letters, numbers, dot, dash or underscore."); return;
+      }
+      if (form.password.length < 6) {
+        setError("Password must be at least 6 characters."); return;
+      }
+    }
     setSaving(true); setError(null);
     try {
+      const { username, password, ...rest } = form;
       const body = {
-        ...form,
+        ...rest,
+        ...(isEdit ? {} : { username: username.trim(), password }),
         hourly_work_rate: parseFloat(form.hourly_work_rate),
         hourly_travel_rate: parseFloat(form.hourly_travel_rate),
         hire_date: form.hire_date || null,
@@ -512,6 +535,52 @@ function EmployeeFormModal({
               <input type="tel" className={inp} value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+54 11 1234 5678" />
             </div>
           </div>
+
+          {!isEdit && (
+            <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+              <p className="flex items-center gap-2 text-xs font-semibold text-[#031634]">
+                <KeyRound size={13} /> App access
+              </p>
+              <p className="text-xs text-gray-500">
+                Every cleaner needs a login to see their visits and fill in the checklist.
+                Give them these details and ask them to change the password from
+                <span className="font-semibold"> My account</span> in the app.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Username <span className="text-red-400">*</span></label>
+                  <input
+                    className={inp}
+                    value={form.username}
+                    onChange={e => set("username", e.target.value)}
+                    autoComplete="off"
+                    placeholder="jane"
+                  />
+                </div>
+                <div>
+                  <label className={lbl}>Password <span className="text-red-400">*</span></label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className={`${inp} pr-10`}
+                      value={form.password}
+                      onChange={e => set("password", e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="At least 6 characters"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div><label className={lbl}>Work rate ($/hr) <span className="text-red-400">*</span></label>
@@ -587,6 +656,102 @@ function EmployeeFormModal({
             {isEdit ? "Save changes" : "Create cleaner"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App access (LAB484) ───────────────────────────────────────────────────────
+// Muestra el usuario de la cleaner, o el alta de acceso si todavia no tiene.
+// No cambia contrasenas: eso se hace desde "My account" en la app.
+
+function AppAccess({
+  employee, onCreated,
+}: {
+  employee: Employee;
+  onCreated: (username: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (employee.username) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-gray-700">
+        <KeyRound size={13} className="text-gray-400 flex-shrink-0" />
+        Signs in as <span className="font-semibold">{employee.username}</span>
+      </p>
+    );
+  }
+
+  async function handleCreate() {
+    if (!/^[a-z0-9._-]{3,30}$/i.test(username.trim())) {
+      setError("Username must be 3-30 characters: letters, numbers, dot, dash or underscore."); return;
+    }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    setSaving(true); setError(null);
+    try {
+      const r = await apiFetch<{ username: string }>(
+        `/api/admin/staff/${employee.id}/credential`,
+        { method: "POST", body: JSON.stringify({ username: username.trim(), password }) }
+      );
+      onCreated(r.username);
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+
+  const inp = "w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#031634]/20 focus:border-[#031634] bg-white";
+
+  if (!open) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+          No login yet — this cleaner cannot open the app.
+        </p>
+        <button onClick={() => setOpen(true)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold bg-[#031634] text-white rounded-xl hover:bg-[#031634]/90 transition-colors">
+          <KeyRound size={13} /> Create login
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {error && (
+        <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex items-start gap-2">
+          <AlertCircle size={13} className="flex-shrink-0 mt-0.5" /> {error}
+        </p>
+      )}
+      {!employee.email && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          Add an email to this cleaner first: it is what links their account to their visits.
+        </p>
+      )}
+      <input className={inp} value={username} placeholder="Username"
+        autoComplete="off" onChange={(e) => setUsername(e.target.value)} />
+      <div className="relative">
+        <input className={`${inp} pr-10`} type={show ? "text" : "password"} value={password}
+          placeholder="Password (at least 6 characters)" autoComplete="new-password"
+          onChange={(e) => setPassword(e.target.value)} />
+        <button type="button" onClick={() => setShow((v) => !v)}
+          aria-label={show ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
+          {show ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={handleCreate} disabled={saving || !employee.email}
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold bg-[#031634] text-white rounded-xl hover:bg-[#031634]/90 disabled:opacity-50 transition-colors">
+          {saving && <Loader2 size={13} className="animate-spin" />} Create login
+        </button>
+        <button onClick={() => { setOpen(false); setError(null); }}
+          className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
+          Cancel
+        </button>
       </div>
     </div>
   );
@@ -703,6 +868,17 @@ function EmployeeDrawer({
                     </p>
                   )}
                 </div>
+              </section>
+
+              {/* LAB484 — acceso a la app. Las cleaners cargadas antes de que
+                  el acceso fuera obligatorio en el alta pueden no tener cuenta:
+                  desde aca se les crea sin salir del dashboard. */}
+              <section>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">App access</p>
+                <AppAccess
+                  employee={employee}
+                  onCreated={(username) => setEmployee((e) => (e ? { ...e, username } : e))}
+                />
               </section>
 
               {/* Rates */}
@@ -1055,6 +1231,12 @@ export default function AdminStaffPage() {
                               {emp.name}
                               {emp.is_team_leader && <span title="Team leader"><Shield size={11} className="text-amber-500 flex-shrink-0" /></span>}
                               {emp.has_license && <span title="Has license"><Car size={11} className="text-blue-400 flex-shrink-0" /></span>}
+                              {/* LAB484 — sin cuenta no puede abrir la app. */}
+                              {emp.username === null && (
+                                <span title="No login yet" className="text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                                  <KeyRound size={9} /> No login
+                                </span>
+                              )}
                             </p>
                             {emp.email && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[180px] lg:hidden">{emp.email}</p>}
                           </div>
@@ -1165,6 +1347,11 @@ export default function AdminStaffPage() {
                         {emp.name}
                         {emp.is_team_leader && <Shield size={11} className="text-amber-500" />}
                         {emp.has_license && <Car size={11} className="text-blue-400" />}
+                        {emp.username === null && (
+                          <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                            <KeyRound size={9} /> No login
+                          </span>
+                        )}
                       </p>
                       {emp.phone && (
                         <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
