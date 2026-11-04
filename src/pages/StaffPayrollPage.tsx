@@ -1,5 +1,5 @@
 // pages/StaffPayrollPage.tsx
-// LAB428 — "Payroll": histórico quincenal del cleaner logueado (eventos,
+// LAB428 — "My Hours": histórico quincenal del cleaner logueado (eventos,
 // horas, traslado — nunca dinero, el backend de staff no lo manda).
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,7 @@ export default function StaffPayrollPage() {
       const summary = await getStaffPayrollSummary(period);
       setData(summary);
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load your payroll summary.');
+      setError(e?.message ?? 'Could not load your hours summary.');
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function StaffPayrollPage() {
           onClick={() => navigate('/staff')}
           className="flex items-center gap-1.5 text-base font-montserrat font-bold"
         >
-          <ArrowLeft size={16} /> Payroll
+          <ArrowLeft size={16} /> My Hours
         </button>
         <button onClick={handleLogout} className="flex items-center gap-1 text-xs text-gray-300 hover:text-white">
           <LogOut size={13} /> Log out

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DateTime } from 'luxon';
-import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, DollarSign, KeyRound, RefreshCw } from 'lucide-react';
+import { LogOut, Calendar, Clock, CalendarPlus, AlertCircle, ChevronRight, KeyRound, RefreshCw } from 'lucide-react';
 import { getStaffDayEvents, type StaffCalendarEvent } from '../api/staffCalendar';
 import { getStaffHoursSummary, type QuincenaPeriod, type StaffHoursSummary } from '../api/staffHours';
 import { STAFF_TOKEN_KEY } from '../api/staffClient';
@@ -229,7 +229,7 @@ export default function StaffHomePage() {
             onClick={() => navigate('/staff/payroll')}
             className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-medium text-[#031634] hover:bg-gray-50"
           >
-            <DollarSign size={16} /> Payroll
+            <Clock size={16} /> My Hours
           </button>
           <button
             onClick={() => setShowChangePassword(true)}
