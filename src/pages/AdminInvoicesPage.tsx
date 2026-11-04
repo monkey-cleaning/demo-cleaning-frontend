@@ -38,13 +38,13 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Client search ─────────────────────────────────────────────────────────────
 
-interface Client { id: string; name?: string; first_name?: string; last_name?: string; email: string; }
+export interface Client { id: string; name?: string; first_name?: string; last_name?: string; email: string; }
 
-function clientDisplayName(c: { name?: string; first_name?: string; last_name?: string }) {
+export function clientDisplayName(c: { name?: string; first_name?: string; last_name?: string }) {
   return c.name ?? ([c.first_name, c.last_name].filter(Boolean).join(' ') || '(no name)');
 }
 
-async function searchClients(q: string): Promise<Client[]> {
+export async function searchClients(q: string): Promise<Client[]> {
   if (!q || q.length < 2) return [];
   const res = await api(`/api/admin/clients/search?q=${encodeURIComponent(q)}&limit=8`) as { ok: boolean; clients: Client[] };
   return Array.isArray(res?.clients) ? res.clients : [];
