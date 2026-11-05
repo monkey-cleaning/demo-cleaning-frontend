@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo, for
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Calendar, X, Plus, Pencil, Trash2, Users, Loader2, AlertTriangle, UserX, Clock, ArrowRight, Copy, Search, PanelTopClose, PanelTopOpen, History as HistoryIcon } from "lucide-react";
 import HistoryDrawer from "../components/admin/HistoryDrawer";
+import PhotoLightbox from "../components/PhotoLightbox";
 import AdminNavbar from "../components/admin/AdminNavbar";
 import RequireAdmin from "../components/admin/RequireAdmin";
 import TeamHeader from "../components/admin/TeamHeader";
@@ -13,7 +14,25 @@ import { ClientFormModal, clientDisplayName, type Client } from "../components/a
 import { findTeamOverlaps, findOverCapacity, findLunchIssues, type LunchIssueFlag } from "../lib/conflictDetection";
 import { suggestTeamOverlapFix, suggestTeamOverlapFixForced, suggestOverCapacityFix, groupOverCapacityClusters, isLunchSummary, type TeamOverlapSuggestion, type OverCapacitySuggestion } from "../lib/conflictResolution";
 import { generateCandidateSlots, type RecurrenceInput } from "../api/calendar";
+import RecurrenceCustomModal from "../components/admin/RecurrenceCustomModal";
+import {
+  defaultCustomPattern, describePattern, firstMatchingDate, fitError, modeFromSeries, modeLabel, patternFromMode,
+  type CustomPattern, type RepeatMode, type SeriesRecurrenceInfo,
+} from "../lib/recurrence";
 import { DateTime } from "luxon";
+
+import { TZ } from '../lib/timezone';
+import TimeSelect from "../components/TimeSelect";
+import AddressLink from "../components/AddressLink";
+// Mientras el admin tipea el año en un <input type="date">, el valor pasa por
+// fechas intermedias ("0002-…", "0020-…", "0202-…") válidas para el navegador
+// pero absurdas para el resto del form (pre-checks de conflictos, series
+// recurrentes). Solo se consideran "reales" años razonables.
+function isSaneLocalDt(v: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return false;
+  const y = Number(v.slice(0, 4));
+  return y >= 2000 && y <= 2100;
+}
 
 // ── Responsive: mobile breakpoint ───────────────────────────────────────────
 
@@ -150,7 +169,7 @@ function authHeaders() {
 function vanParts(iso: string) {
   const d = new Date(iso);
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Vancouver",
+    timeZone: TZ,
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", hour12: false,
   }).formatToParts(d);
@@ -172,7 +191,7 @@ function vanStringToIso(vanLocal: string): string {
   const asUtc = new Date(vanLocal + "Z");
   if (isNaN(asUtc.getTime())) return "";
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Vancouver",
+    timeZone: TZ,
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   }).formatToParts(asUtc);
@@ -225,13 +244,6 @@ async function apiUpdateEvent(
   return normalizeEvent(data.event as CalEvent);
 }
 
-interface SeriesRecurrenceInfo {
-  freq: "WEEKLY" | "BIWEEKLY" | "MONTHLY";
-  endType: "never" | "count" | "until";
-  count: number | null;
-  until: string | null; // ISO date
-}
-
 async function apiFetchSeriesRecurrence(masterId: string): Promise<SeriesRecurrenceInfo | null> {
   const res = await fetch(`${API_BASE}/api/calendar/series/${masterId}/recurrence`, { headers: authHeaders() });
   if (!res.ok) return null;
@@ -256,6 +268,63 @@ async function apiFetchEventNotes(seriesKey: string): Promise<EventNote[]> {
   if (!res.ok) return [];
   const data = await res.json();
   return (data.notes as EventNote[]) ?? [];
+}
+
+// LAB457 — checklist de indicaciones para el evento/serie. El admin es el
+// único que crea/edita/borra items (ver EventFormModal); el check-off y las
+// fotos los carga el staff desde el staff calendar (eventChecklistController.js).
+interface ChecklistItem {
+  id: string;
+  label: string;
+  sort_order: number;
+  /** LAB462 — item del checklist general (se edita en /admin/checklists). */
+  isGeneral: boolean;
+  requirePhoto: boolean;
+  completed: boolean;
+  completedAt: string | null;
+  completedBy?: string | null;
+  photos: { id: string; url: string }[];
+}
+// LAB462 — fotos que el cleaner mandó a central desde esta visita.
+interface CentralSubmissionLite {
+  id: string;
+  sentBy: string | null;
+  comment: string | null;
+  photos: string[];
+  createdAt: string;
+}
+async function apiFetchCentralForEvent(eventId: string): Promise<CentralSubmissionLite[]> {
+  const res = await fetch(`${API_BASE}/api/calendar/central-submissions?eventId=${encodeURIComponent(eventId)}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.submissions as CentralSubmissionLite[]) ?? [];
+}
+async function apiFetchChecklist(seriesKey: string, eventId?: string): Promise<ChecklistItem[]> {
+  const params = new URLSearchParams({ seriesKey, ...(eventId ? { eventId } : {}) });
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist?${params.toString()}`, { headers: authHeaders() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.items as ChecklistItem[]) ?? [];
+}
+async function apiAddChecklistItem(seriesKey: string, label: string, requirePhoto: boolean): Promise<ChecklistItem> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist`, {
+    method: "POST", headers: authHeaders(), body: JSON.stringify({ seriesKey, label, requirePhoto }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  return data.item as ChecklistItem;
+}
+async function apiUpdateChecklistItem(itemId: string, patch: { label: string; requirePhoto: boolean }): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist/${itemId}`, {
+    method: "PATCH", headers: authHeaders(), body: JSON.stringify(patch),
+  });
+  if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
+}
+async function apiArchiveChecklistItem(itemId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/calendar/events/checklist/${itemId}`, {
+    method: "DELETE", headers: authHeaders(),
+  });
+  if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? `HTTP ${res.status}`); }
 }
 
 async function apiFetchEmployee(id: string): Promise<{ id: string; name: string; availability?: unknown[]; time_off?: unknown[]; extra_availability?: unknown[] }> {
@@ -361,6 +430,7 @@ interface EventSearchResult {
   isAllDay: boolean;
   isPast: boolean; // ← NUEVO
   clientId: string | null;
+  address?: string | null;
   htmlLink: string | null;
 }
 
@@ -501,49 +571,49 @@ const DURATION_OPTIONS = [
   { label: "6 hours", value: 6 },
 ];
 
-// Google-Calendar-style time options, 15-minute increments ("9:00 AM").
-const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
-  const h24 = Math.floor(i / 4);
-  const m = (i % 4) * 15;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const value = `${pad(h24)}:${pad(m)}`;
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  const ampm = h24 < 12 ? "AM" : "PM";
-  return { value, label: `${h12}:${pad(m)} ${ampm}` };
-});
 
-function formatTimeLabel(value24: string) {
-  if (!value24) return "";
-  const [h, m] = value24.split(":").map(Number);
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  const ampm = h < 12 ? "AM" : "PM";
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-// Acepta "9", "930", "9:30", "9:30am", "9:30 PM", "21:30", etc.
-// Sin AM/PM asume 24h. Devuelve "HH:MM" (24h) o null si no matchea nada.
-function parseTimeInput(raw: string): string | null {
+// Acepta "2", "2.5", "2h", "2 hours", "1h30", "1h30m", "1:30", "90m", "90 min", etc.
+// Devuelve horas (número) o null si no matchea nada.
+function parseDurationInput(raw: string): number | null {
   const s = raw.trim().toLowerCase();
   if (!s) return null;
-  const m = s.match(/^(\d{1,2})(?::?(\d{2}))?\s*([ap]\.?m?\.?)?$/);
-  if (!m) return null;
-  let h = parseInt(m[1], 10);
-  const min = m[2] ? parseInt(m[2], 10) : 0;
-  if (min > 59) return null;
-  const ampm = m[3] ? m[3][0] : null;
-  if (ampm) {
-    if (h < 1 || h > 12) return null;
-    h = ampm === "a" ? (h === 12 ? 0 : h) : (h === 12 ? 12 : h + 12);
-  } else if (h > 23) {
-    return null;
-  }
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(h)}:${pad(min)}`;
+
+  let m = s.match(/^(\d+):([0-5]?\d)$/);
+  if (m) return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\s*(?:(\d+)\s*(?:m|min|mins|minute|minutes)?)?$/);
+  if (m) return parseFloat(m[1]) + (m[2] ? parseInt(m[2], 10) : 0) / 60;
+
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)$/);
+  if (m) return parseFloat(m[1]) / 60;
+
+  m = s.match(/^(\d+(?:[.,]\d+)?)$/);
+  if (m) return parseFloat(m[1].replace(",", "."));
+
+  return null;
 }
 
-const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: string) => void; className?: string; placeholder?: string }>(
-  ({ value, onChange, className, placeholder }, ref) => {
-    const [text, setText] = useState(() => formatTimeLabel(value));
+// Igual que las labels de DURATION_OPTIONS ("2 hours") pero para cualquier valor
+// arbitrario tipeado por el usuario (ej "1 hr 40 min").
+function formatDurationLabel(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m} minute${m === 1 ? "" : "s"}`;
+  if (m === 0) return `${h} hour${h === 1 ? "" : "s"}`;
+  return `${h} hr ${m} min`;
+}
+
+// Usa la label del preset si el valor coincide con uno (ej "1.5 hours"),
+// sino formatea el valor custom.
+function formatDurationValue(hours: number): string {
+  const preset = DURATION_OPTIONS.find(o => Math.abs(o.value - hours) < 0.01);
+  return preset ? preset.label : formatDurationLabel(hours);
+}
+
+const DurationSelect = forwardRef<HTMLInputElement, { value: number; onChange: (v: number) => void; className?: string }>(
+  ({ value, onChange, className }, ref) => {
+    const [text, setText] = useState(() => formatDurationValue(value));
     const [invalid, setInvalid] = useState(false);
     const [open, setOpen] = useState(false);
     const [typing, setTyping] = useState(false);
@@ -551,9 +621,8 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
     const wrapRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => { setText(formatTimeLabel(value)); }, [value]);
+    useEffect(() => { setText(formatDurationValue(value)); }, [value]);
 
-    // Cierra el dropdown al clickear afuera.
     useEffect(() => {
       if (!open) return;
       function handler(e: MouseEvent) {
@@ -563,29 +632,23 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
       return () => document.removeEventListener("mousedown", handler);
     }, [open]);
 
-    // Filtra la lista mientras se escribe — prefijo primero (GCal-style:
-    // "9:0" prioriza "9:00 AM"/"9:00 PM"), y si no matchea nada por
-    // prefijo, busca como substring en cualquier parte del label.
-    // GCal-style: al abrir sin haber tipeado nada, muestra la lista completa
-    // (scrolleada hasta la hora actual). Recién filtra en vivo cuando el
-    // usuario empieza a escribir.
+    // Filtra por prefijo (igual que TimeSelect); si no matchea nada por
+    // prefijo, busca como substring. Sin tipear, muestra la lista completa.
     const filtered = useMemo(() => {
-      if (!typing) return TIME_OPTIONS;
+      if (!typing) return DURATION_OPTIONS;
       const q = text.trim().toLowerCase();
-      if (!q) return TIME_OPTIONS;
-      const starts = TIME_OPTIONS.filter(t => t.label.toLowerCase().startsWith(q));
-      return starts.length > 0 ? starts : TIME_OPTIONS.filter(t => t.label.toLowerCase().includes(q));
+      if (!q) return DURATION_OPTIONS;
+      const starts = DURATION_OPTIONS.filter(o => o.label.toLowerCase().startsWith(q));
+      return starts.length > 0 ? starts : DURATION_OPTIONS.filter(o => o.label.toLowerCase().includes(q));
     }, [text, typing]);
 
-    // Al abrir, hace scroll hasta la opción actualmente seleccionada
-    // (mismo comportamiento que el dropdown de GCal).
     useEffect(() => {
       if (open && listRef.current) {
         listRef.current.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" });
       }
     }, [open]);
 
-    function selectOption(opt: { value: string; label: string }) {
+    function selectOption(opt: { value: number; label: string }) {
       onChange(opt.value);
       setText(opt.label);
       setInvalid(false);
@@ -594,19 +657,18 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
     }
 
     function commit() {
-      const parsed = parseTimeInput(text);
-      if (parsed) {
-        onChange(parsed);
-        setText(formatTimeLabel(parsed));
+      const parsed = parseDurationInput(text);
+      if (parsed && parsed > 0) {
+        const clamped = Math.min(parsed, 24);
+        onChange(clamped);
+        setText(formatDurationValue(clamped));
         setInvalid(false);
       } else if (text.trim() !== "") {
-        // No se pudo interpretar — vuelve al último valor válido en vez de
-        // mandar basura al form o dejar el campo en un estado raro.
         setInvalid(true);
         setTimeout(() => setInvalid(false), 1200);
-        setText(formatTimeLabel(value));
+        setText(formatDurationValue(value));
       } else {
-        setText(formatTimeLabel(value));
+        setText(formatDurationValue(value));
       }
       setOpen(false);
       setTyping(false);
@@ -618,11 +680,8 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
           ref={ref}
           type="text"
           value={text}
-          placeholder={placeholder}
           onChange={e => { setText(e.target.value); setOpen(true); setTyping(true); setHighlightIdx(-1); }}
           onFocus={() => { setOpen(true); setTyping(false); }}
-          // Delay para que un click en una opción (que dispara blur primero)
-          // alcance a registrarse antes de que commit() cierre el dropdown.
           onBlur={() => setTimeout(commit, 120)}
           onKeyDown={e => {
             if (e.key === "Enter") {
@@ -630,7 +689,7 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
               if (open && highlightIdx >= 0 && filtered[highlightIdx]) selectOption(filtered[highlightIdx]);
               else commit();
             } else if (e.key === "Escape") {
-              setText(formatTimeLabel(value));
+              setText(formatDurationValue(value));
               setOpen(false);
               setTyping(false);
             } else if (e.key === "ArrowDown") {
@@ -650,19 +709,16 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
             ref={listRef}
             className="absolute z-50 mt-1 max-h-52 w-full min-w-[110px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg py-1"
           >
-            {filtered.map((t, i) => (
+            {filtered.map((o, i) => (
               <button
-                key={t.value}
+                key={o.value}
                 type="button"
-                data-active={t.value === value}
-                // onMouseDown + preventDefault en vez de onClick: evita que
-                // el input pierda el foco (y dispare blur/commit) antes de
-                // que el click en la opción llegue a procesarse.
-                onMouseDown={e => { e.preventDefault(); selectOption(t); }}
-                className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${t.value === value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700"
+                data-active={o.value === value}
+                onMouseDown={e => { e.preventDefault(); selectOption(o); }}
+                className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${o.value === value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700"
                   } ${i === highlightIdx ? "bg-gray-100" : ""}`}
               >
-                {t.label}
+                {o.label}
               </button>
             ))}
           </div>
@@ -671,7 +727,7 @@ const TimeSelect = forwardRef<HTMLInputElement, { value: string; onChange: (v: s
     );
   }
 );
-TimeSelect.displayName = "TimeSelect";
+DurationSelect.displayName = "DurationSelect";
 
 // ── LunchFormModal ────────────────────────────────────────────────────────────
 // Simplified modal for creating "Lunch" events (15 min duration, fixed title).
@@ -688,7 +744,7 @@ function LunchFormModal({
   function toLocalInput(iso: string): string {
     const d = new Date(iso);
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", hour12: false,
     }).formatToParts(d);
@@ -702,7 +758,7 @@ function LunchFormModal({
     const asUtc = new Date(localVal + "Z");
     if (isNaN(asUtc.getTime())) return "";
     const vanParts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
     }).formatToParts(asUtc);
@@ -890,7 +946,7 @@ function EventFormModal({
   function toLocalInput(iso: string): string {
     const d = new Date(iso);
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", hour12: false,
     }).formatToParts(d);
@@ -908,7 +964,7 @@ function EventFormModal({
     if (isNaN(asUtc.getTime())) return "";
     // Get what Vancouver shows for this UTC instant
     const vanParts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Vancouver",
+      timeZone: TZ,
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
     }).formatToParts(asUtc);
@@ -949,6 +1005,27 @@ function EventFormModal({
   // event's description, alongside a hidden "client_id: <uuid>" marker line
   // which we strip out here so the admin only edits the actual notes.
   const [eventNotes, setEventNotes] = useState(() => stripClientIdLine(htmlToPlainText(event?.description ?? duplicateFrom?.description)));
+
+  // LAB457 — checklist de indicaciones para esta serie/evento. Se edita en
+  // memoria acá (id ausente = item nuevo, todavía no persistido) y se
+  // reconcilia contra el backend recién al guardar el evento (handleSubmit),
+  // igual que el resto de los campos del form. checklistOriginal guarda lo
+  // que había al abrir el modal, para poder diffear qué agregar/editar/borrar.
+  const checklistSeriesKey = event?.seriesId || event?.id || null;
+  const [checklistItems, setChecklistItems] = useState<{ id?: string; label: string; requirePhoto: boolean }[]>([]);
+  const checklistOriginal = useRef<{ id: string; label: string; requirePhoto: boolean }[]>([]);
+  useEffect(() => {
+    if (!checklistSeriesKey) return;
+    let cancelled = false;
+    apiFetchChecklist(checklistSeriesKey).then((items) => {
+      if (cancelled) return;
+      const loaded = items.map((i) => ({ id: i.id, label: i.label, requirePhoto: i.requirePhoto }));
+      checklistOriginal.current = loaded;
+      setChecklistItems(loaded);
+    });
+    return () => { cancelled = true; };
+  }, [checklistSeriesKey]);
+
   const [location, setLocation] = useState(event?.location ?? duplicateFrom?.location ?? "");
   const [startVal, setStartVal] = useState(defaultStart);
   const [endVal, setEndVal] = useState(defaultEnd);
@@ -961,6 +1038,7 @@ function EventFormModal({
   function handleStartChange(newStart: string) {
     setStartVal(newStart);
     if (!isEdit) return; // create mode ya recalcula End via su propio efecto (duration)
+    if (!isSaneLocalDt(newStart)) return; // año a medio tipear: no recalcular End
     const newEndDate = new Date(new Date(newStart).getTime() + durationMsRef.current);
     const pad = (n: number) => String(n).padStart(2, "0");
     setEndVal(`${newEndDate.getFullYear()}-${pad(newEndDate.getMonth() + 1)}-${pad(newEndDate.getDate())}T${pad(newEndDate.getHours())}:${pad(newEndDate.getMinutes())}`);
@@ -1027,14 +1105,19 @@ function EventFormModal({
   const [duration, setDuration] = useState(() => {
     if (!duplicateFrom) return 2;
     const hours = (new Date(duplicateFrom.endIso).getTime() - new Date(duplicateFrom.startIso).getTime()) / 3_600_000;
-    const match = DURATION_OPTIONS.find(o => Math.abs(o.value - hours) < 0.01);
-    return match ? match.value : 2;
+    return hours > 0 ? hours : 2;
   });
   const [searchingClient, setSearchingClient] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
 
-  const [recurrenceFreq, setRecurrenceFreq] = useState<"" | "WEEKLY" | "BIWEEKLY" | "MONTHLY">("");
-  const [recurrenceEndType, setRecurrenceEndType] = useState<"never" | "count" | "until">("never");
+  // LAB617: presets (Weekly / Every 2 weeks / Monthly = cada 4 semanas) + "Custom…".
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("");
+  const [customPattern, setCustomPattern] = useState<CustomPattern | null>(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const modeBeforeCustomRef = useRef<RepeatMode>("");
+  // Serie que el panel no sabe editar (p. ej. diaria): se muestra, no se reescribe.
+  const [unsupportedRule, setUnsupportedRule] = useState<string | null>(null);
+  const [recurrenceEndType, setRecurrenceEndType] = useState<"year" | "never" | "count" | "until">("year");
   const [recurrenceCount, setRecurrenceCount] = useState(10);
   const [recurrenceUntil, setRecurrenceUntil] = useState("");
   const [recurrenceTouched, setRecurrenceTouched] = useState(false);
@@ -1048,7 +1131,10 @@ function EventFormModal({
     apiFetchSeriesRecurrence(event.seriesId)
       .then(info => {
         if (cancelled || !info) return;
-        setRecurrenceFreq(info.freq);
+        const { mode, custom } = modeFromSeries(info, startVal.slice(0, 10));
+        setRepeatMode(mode);
+        setCustomPattern(custom);
+        if (mode === "UNSUPPORTED") setUnsupportedRule(info.raw ?? null);
         setRecurrenceEndType(info.endType);
         if (info.count) setRecurrenceCount(info.count);
         if (info.until) setRecurrenceUntil(info.until);
@@ -1058,19 +1144,38 @@ function EventFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const recurrencePattern = useMemo(() => patternFromMode(repeatMode, customPattern), [repeatMode, customPattern]);
+  // En una serie ya existente la fecha del form es la de la instancia, no la
+  // del inicio real de la serie: ahí valida el backend (contra el DTSTART).
+  const recurrenceFitError = useMemo(
+    () => (recurrencePattern && !(isEdit && isPartOfSeries) ? fitError(recurrencePattern, startVal.slice(0, 10)) : null),
+    [recurrencePattern, isEdit, isPartOfSeries, startVal],
+  );
+
+  function onRepeatModeChange(next: RepeatMode) {
+    if (next === "CUSTOM") {
+      modeBeforeCustomRef.current = repeatMode;
+      if (!customPattern) setCustomPattern(defaultCustomPattern(startVal.slice(0, 10)));
+      setShowCustomModal(true);
+      return;
+    }
+    setRecurrenceTouched(true);
+    setRepeatMode(next);
+  }
+
   const [seriesConflicts, setSeriesConflicts] = useState<{ dateIso: string; type: string; detail: string }[]>([]);
   const [checkingConflicts, setCheckingConflicts] = useState(false);
 
   useEffect(() => {
     // Sin equipo asignado no hay nada contra qué comparar (mismo criterio que
     // el backend: teamIdFromColorId(null) siempre devuelve null).
-    if (!colorId || !startVal || endVal <= startVal) { setSeriesConflicts([]); return; }
+    if (!colorId || !isSaneLocalDt(startVal) || !isSaneLocalDt(endVal) || endVal <= startVal) { setSeriesConflicts([]); return; }
 
     setCheckingConflicts(true);
     const timer = setTimeout(async () => {
-      const slots = (!isEdit && recurrenceFreq)
+      const slots = (!isEdit && recurrencePattern)
         ? generateCandidateSlots(inputToIso(startVal), inputToIso(endVal), {
-          freq: recurrenceFreq,
+          ...recurrencePattern,
           ...(recurrenceEndType === "count" && { count: recurrenceCount }),
           ...(recurrenceEndType === "until" && recurrenceUntil && { until: recurrenceUntil }),
         })
@@ -1084,7 +1189,7 @@ function EventFormModal({
       setCheckingConflicts(false);
     }, 400);
     return () => { clearTimeout(timer); setCheckingConflicts(false); };
-  }, [isEdit, recurrenceFreq, recurrenceEndType, recurrenceCount, recurrenceUntil, startVal, endVal, colorId, event?.id, event?.seriesId]);
+  }, [isEdit, recurrencePattern, recurrenceEndType, recurrenceCount, recurrenceUntil, startVal, endVal, colorId, event?.id, event?.seriesId]);
   // notes — permanent notes about the client & the cleaning location
   // (door codes, property specs). Prefilled from DB, editable here, saved
   // back to the clients row (independent of the calendar event save).
@@ -1136,7 +1241,7 @@ function EventFormModal({
   const { preferenceCheck: clientPreferenceCheck, loadingPreference: loadingClientPreference } = useClientPreferences(
     !isEdit ? (selectedClient?.id ?? null) : null,
     !isEdit ? summary : "",
-    !isEdit && LOCAL_DT_RE.test(startVal) ? inputToIso(startVal) : "",
+    !isEdit && isSaneLocalDt(startVal) ? inputToIso(startVal) : "",
   );
 
   // LAB309: Duplicate mode — prefill the client picker (and notes/service type)
@@ -1184,7 +1289,7 @@ function EventFormModal({
 
   // Update endVal when start or duration changes
   useEffect(() => {
-    if (!isEdit && LOCAL_DT_RE.test(startVal)) {
+    if (!isEdit && isSaneLocalDt(startVal)) {
       const start = new Date(startVal);
       const end = new Date(start.getTime() + duration * 3_600_000);
       const pad = (n: number) => String(n).padStart(2, "0");
@@ -1233,6 +1338,7 @@ function EventFormModal({
   // or when conflictRefreshKey changes (e.g. after editing a cleaner's schedule).
   useEffect(() => {
     if (!isEdit || !event) return;
+    if (!isSaneLocalDt(startVal) || !isSaneLocalDt(endVal)) return;
     const newStartIso = inputToIso(startVal);
     const newEndIso = inputToIso(endVal);
     setChecking(true);
@@ -1250,21 +1356,26 @@ function EventFormModal({
     if (!LOCAL_DT_RE.test(startVal) || !LOCAL_DT_RE.test(endVal)) { setError("Pick both a start date and a start time"); return; }
     if (endVal <= startVal) { setError("End time must be after start"); return; }
 
-    const includeRecurrence = !!recurrenceFreq && (!isEdit || !isPartOfSeries || recurrenceTouched);
+    const includeRecurrence = !!recurrencePattern && (!isEdit || !isPartOfSeries || recurrenceTouched);
+    if (includeRecurrence && recurrenceFitError) {
+      setError(`${recurrenceFitError} Change the start date or the pattern.`);
+      return;
+    }
 
     // LAB-233: editing an occurrence that belongs to a series — ask the admin
     // whether the change should apply to just this event or the whole series,
     // before doing any network work. Re-entered with the chosen scope once
     // RecurrenceScopeModal calls back.
     if (isEdit && event?.seriesId && !pendingScopeChoice) {
-      if (includeRecurrence) {
-        // Un cambio de patrón solo tiene sentido para toda la serie —
-        // se salta el picker de single/following/all.
-        scope = "all";
-      } else {
-        setPendingScopeChoice(true);
-        return;
-      }
+      // Un cambio de patrón arranca en "este y los siguientes" (lo anterior no
+      // se toca); el picker no ofrece "solo este" ni "toda la serie" en ese caso.
+      setPendingScopeChoice(true);
+      return;
+    }
+    if (includeRecurrence && isEdit && isPartOfSeries && scope === "following") {
+      // "Este y los siguientes" arranca en la fecha de esta instancia: el patrón tiene que calzar ahí.
+      const fit = fitError(recurrencePattern!, startVal.slice(0, 10));
+      if (fit) { setError(`${fit} Change the start date or the pattern.`); return; }
     }
 
     setSaving(true); setError(null);
@@ -1285,7 +1396,8 @@ function EventFormModal({
         ...(serviceType && { serviceType }),
         ...(includeRecurrence && {
           recurrence: {
-            freq: recurrenceFreq,
+            ...recurrencePattern!,
+            ...(recurrenceEndType === "never" && { endless: true }),
             ...(recurrenceEndType === "count" && { count: recurrenceCount }),
             ...(recurrenceEndType === "until" && recurrenceUntil && { until: inputToIso(`${recurrenceUntil}T23:59`) }),
           },
@@ -1294,6 +1406,36 @@ function EventFormModal({
       const saved = isEdit
         ? await apiUpdateEvent(event!.id, fullInput, scope)
         : await apiCreateEvent(fullInput);
+
+      // LAB457 — reconcilia la checklist recién ahora que hay un event.id
+      // confirmado (un evento nuevo no lo tiene hasta este punto). Best-effort:
+      // no bloquea el save del evento en sí, mismo criterio que client notes
+      // más abajo. Diff contra checklistOriginal: sin id = alta, id presente
+      // con label distinto = edición, id que ya no está en la lista = borrado.
+      try {
+        const seriesKeyForChecklist = saved.seriesId || saved.id;
+        const originalById = new Map(checklistOriginal.current.map((i) => [i.id, i]));
+        const stillPresent = new Set(checklistItems.filter((i) => i.id).map((i) => i.id));
+        for (const item of checklistItems) {
+          const label = item.label.trim();
+          if (!label) continue;
+          if (!item.id) {
+            await apiAddChecklistItem(seriesKeyForChecklist, label, item.requirePhoto);
+          } else {
+            const before = originalById.get(item.id);
+            if (before?.label !== label || before?.requirePhoto !== item.requirePhoto) {
+              await apiUpdateChecklistItem(item.id, { label, requirePhoto: item.requirePhoto });
+            }
+          }
+        }
+        for (const original of checklistOriginal.current) {
+          if (!stillPresent.has(original.id)) {
+            await apiArchiveChecklistItem(original.id);
+          }
+        }
+      } catch (e: any) {
+        console.warn("Failed to save checklist:", e.message);
+      }
 
       // Save notes (clients table) best-effort — doesn't block the
       // event save if it fails, since it's a secondary write to a different resource.
@@ -1504,24 +1646,58 @@ function EventFormModal({
             ) : (
               <>
                 <select
-                  value={recurrenceFreq}
-                  onChange={e => { setRecurrenceFreq(e.target.value as any); setRecurrenceTouched(true); }}
+                  value={repeatMode}
+                  onChange={e => onRepeatModeChange(e.target.value as RepeatMode)}
                   className={`${inputCls} bg-white`}
                 >
                   <option value="">Does not repeat</option>
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="BIWEEKLY">Every 2 weeks</option>
-                  <option value="MONTHLY">Monthly</option>
+                  <option value="WEEKLY">{modeLabel("WEEKLY")}</option>
+                  <option value="BIWEEKLY">{modeLabel("BIWEEKLY")}</option>
+                  <option value="EVERY_4_WEEKS">{modeLabel("EVERY_4_WEEKS")}</option>
+                  <option value="CUSTOM">{modeLabel("CUSTOM")}</option>
+                  {repeatMode === "UNSUPPORTED" && <option value="UNSUPPORTED" disabled>{modeLabel("UNSUPPORTED")}</option>}
                 </select>
 
-                {recurrenceFreq && (
+                {repeatMode === "CUSTOM" && recurrencePattern && (
+                  <p className="text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+                    <span>{describePattern(recurrencePattern)}</span>
+                    <button
+                      type="button"
+                      onClick={() => { modeBeforeCustomRef.current = repeatMode; setShowCustomModal(true); }}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </p>
+                )}
+                {repeatMode === "UNSUPPORTED" && (
+                  <p className="text-[11px] text-gray-400 break-all">
+                    This series uses a pattern the panel can't edit{unsupportedRule ? ` (${unsupportedRule.replace(/^RRULE:/, "")})` : ""}.
+                    Choose another option above to replace it for the whole series.
+                  </p>
+                )}
+                {recurrenceFitError && recurrencePattern && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-1">
+                    <p className="text-xs text-amber-700">{recurrenceFitError} Change the start date or the pattern.</p>
+                    <button
+                      type="button"
+                      onClick={() => handleStartChange(`${firstMatchingDate(recurrencePattern, startVal.slice(0, 10))}T${startVal.slice(11)}`)}
+                      className="text-xs font-medium text-amber-800 underline hover:text-amber-900"
+                    >
+                      Move the start to {DateTime.fromISO(firstMatchingDate(recurrencePattern, startVal.slice(0, 10)), { zone: "utc" }).setLocale("en").toFormat("ccc, LLL d")}
+                    </button>
+                  </div>
+                )}
+
+                {repeatMode && repeatMode !== "UNSUPPORTED" && (
                   <div className="space-y-2">
                     <select
                       value={recurrenceEndType}
                       onChange={e => { setRecurrenceEndType(e.target.value as any); setRecurrenceTouched(true); }}
                       className={`${inputCls} bg-white`}
                     >
-                      <option value="never">Ends after 1 year (default)</option>
+                      <option value="year">Ends after 1 year (default)</option>
+                      <option value="never">Never</option>
                       <option value="count">Ends after N occurrences</option>
                       <option value="until">Ends on date</option>
                     </select>
@@ -1539,10 +1715,24 @@ function EventFormModal({
                 )}
 
                 {isEdit && isPartOfSeries && recurrenceTouched && (
-                  <p className="text-[11px] text-amber-600">This changes the pattern for the whole series ("All recurring events").</p>
+                  <p className="text-[11px] text-amber-600">You'll choose whether the new pattern applies from this event on or to the whole series.</p>
                 )}
-                {isEdit && !isPartOfSeries && recurrenceFreq && (
+                {isEdit && !isPartOfSeries && repeatMode && (
                   <p className="text-[11px] text-gray-400">This turns this event into a recurring series starting now.</p>
+                )}
+                {showCustomModal && customPattern && (
+                  <RecurrenceCustomModal
+                    initial={customPattern}
+                    startDate={startVal.slice(0, 10)}
+                    onSave={p => {
+                      setCustomPattern(p);
+                      setRepeatMode("CUSTOM");
+                      setRecurrenceTouched(true);
+                      setShowCustomModal(false);
+                    }}
+                    onCancel={() => { setRepeatMode(modeBeforeCustomRef.current); setShowCustomModal(false); }}
+                    onMoveStart={date => handleStartChange(`${date}T${startVal.slice(11)}`)}
+                  />
                 )}
               </>
             )}
@@ -1582,9 +1772,7 @@ function EventFormModal({
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1">Duration</label>
-                <select value={duration} onChange={e => setDuration(Number(e.target.value))} className={`${inputCls} bg-white`}>
-                  {DURATION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <DurationSelect value={duration} onChange={setDuration} className={`${inputCls} bg-white`} />
               </div>
             </div>
           )}
@@ -1627,7 +1815,7 @@ function EventFormModal({
               </p>
               {seriesConflicts.map((c, i) => (
                 <p key={i} className="text-xs text-amber-700">
-                  {DateTime.fromISO(c.dateIso, { zone: "America/Vancouver" }).toFormat("ccc, LLL d 'at' h:mm a")}: {c.detail}
+                  {DateTime.fromISO(c.dateIso, { zone: TZ }).toFormat("ccc, LLL d 'at' h:mm a")}: {c.detail}
                 </p>
               ))}
               <p className="text-[11px] text-amber-600 mt-1">
@@ -1639,6 +1827,54 @@ function EventFormModal({
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1">Event notes</label>
             <textarea rows={4} value={eventNotes} onChange={e => setEventNotes(e.target.value)} placeholder="Notes for this specific visit (e.g. focus on kitchen this week)…" className={`${inputCls} resize-none`} />
+          </div>
+
+          {/* LAB457 — indicaciones para el staff (checklist), con check-off y
+              fotos del lado del staff calendar. */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Extra checklist items for this home</label>
+            <p className="text-[11px] text-gray-400 mb-1.5">
+              Cleaners also get the general checklist on every visit (edit it in Checklists). Items added here only appear for this home.
+            </p>
+            <div className="space-y-1.5">
+              {checklistItems.map((item, idx) => (
+                <div key={item.id ?? `new-${idx}`} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={item.label}
+                    onChange={(e) => setChecklistItems((prev) => prev.map((it, i) => i === idx ? { ...it, label: e.target.value } : it))}
+                    placeholder="e.g. Clean inside the oven"
+                    className={`${inputCls} flex-1`}
+                  />
+                  <label className="flex items-center gap-1 text-[11px] text-gray-500 flex-shrink-0 cursor-pointer" title="The cleaner must add a photo before marking this item as completed">
+                    <input
+                      type="checkbox"
+                      checked={item.requirePhoto}
+                      onChange={(e) => setChecklistItems((prev) => prev.map((it, i) => i === idx ? { ...it, requirePhoto: e.target.checked } : it))}
+                    />
+                    Photo required
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setChecklistItems((prev) => prev.filter((_, i) => i !== idx))}
+                    className="p-1 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
+                    aria-label="Remove item"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setChecklistItems((prev) => [...prev, { label: "", requirePhoto: false }])}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 transition-colors mt-1"
+              >
+                <Plus size={13} /> Add item for this home
+              </button>
+              {!isEdit && checklistItems.length > 0 && (
+                <p className="text-[11px] text-gray-400">Saved once you create the event.</p>
+              )}
+            </div>
           </div>
         </div>
         <div className="px-6 py-4 flex items-center justify-end gap-2 border-t border-gray-100">
@@ -1656,6 +1892,7 @@ function EventFormModal({
         {pendingScopeChoice && (
           <RecurrenceScopeModal
             action="save"
+            patternChange={isEdit && isPartOfSeries && recurrenceTouched && !!recurrencePattern}
             onConfirm={(scope) => { setPendingScopeChoice(false); handleSubmit(scope); }}
             onCancel={() => setPendingScopeChoice(false)}
           />
@@ -1676,9 +1913,11 @@ function EventFormModal({
 // ── RecurrenceScopeModal ────────────────────────────────────────────────────────────
 
 function RecurrenceScopeModal({
-  action, onConfirm, onCancel, hideAllOption = false,
+  action, patternChange = false, onConfirm, onCancel, hideAllOption = false,
 }: {
   action: "save" | "delete";
+  /** Se está cambiando cómo se repite la serie: solo "este y los siguientes" aplica. */
+  patternChange?: boolean;
   onConfirm: (scope: "single" | "following" | "all") => void;
   onCancel: () => void;
   // Oculta "all recurring events" — p. ej. al arrastrar/reprogramar una
@@ -1691,18 +1930,22 @@ function RecurrenceScopeModal({
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
         <h3 className="font-medium text-gray-800">This is a recurring event</h3>
         <p className="text-sm text-gray-500">
-          {hideAllOption
+          {patternChange
+            ? "The new repeat pattern starts at this event. Events before this one are not changed."
+            : hideAllOption
             ? "Choose whether this applies to just this occurrence or this and future ones."
             : "Choose whether this applies to just this occurrence, this and future ones, or all recurring events."}
         </p>
         <div className="space-y-2">
-          <button onClick={() => onConfirm("single")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
-            {verb} — this event only
-          </button>
+          {!patternChange && (
+            <button onClick={() => onConfirm("single")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
+              {verb} — this event only
+            </button>
+          )}
           <button onClick={() => onConfirm("following")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
             {verb} — this and following events
           </button>
-          {!hideAllOption && (
+          {!hideAllOption && !patternChange && (
             <button onClick={() => onConfirm("all")} className="w-full text-left px-4 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
               {verb} — all recurring events
             </button>
@@ -2143,7 +2386,7 @@ function RescheduleModal({ event, newStartIso, newEndIso, onConfirm, onCancel, o
   event: CalEvent; newStartIso: string; newEndIso: string; onConfirm: () => void; onCancel: () => void; onAssign: () => void;
 }) {
   const fmt = (iso: string) => new Date(iso).toLocaleString("en-US", {
-    timeZone: "America/Vancouver",
+    timeZone: TZ,
     weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
   });
 
@@ -2398,7 +2641,7 @@ function ConflictResolutionModal({ type, events, teamOrder, maxSimultaneousTeams
   }
 
   const fmt = (iso: string) => new Date(iso).toLocaleString("en-US", {
-    timeZone: "America/Vancouver", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+    timeZone: TZ, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
   });
 
   function skip() {
@@ -2711,7 +2954,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
   const showDropdown = open && query.trim().length >= 2;
 
   function fmtDate(iso: string) {
-    return DateTime.fromISO(iso, { zone: "America/Vancouver" }).toFormat("ccc, LLL d yyyy");
+    return DateTime.fromISO(iso, { zone: TZ }).toFormat("ccc, LLL d yyyy");
   }
 
   function clear() {
@@ -2726,7 +2969,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder="Search events or clients…"
+          placeholder="Search events, clients or addresses…"
           className="w-full pl-8 pr-7 py-1.5 text-sm rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-300 focus:outline-none transition-colors"
         />
         {query && (
@@ -2780,6 +3023,7 @@ function GlobalSearchBar({ onSelectEvent, onSelectClient }: {
                       {ev.summary}
                     </p>
                     <p className="text-xs text-gray-400">{fmtDate(ev.startIso)}</p>
+                    {ev.address && <p className="text-xs text-gray-400 truncate">{ev.address}</p>}
                   </div>
                 </button>
               ))}
@@ -2804,6 +3048,20 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
   const [deleting, setDeleting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const isMobile = useIsMobile();
+  // Altura real del popover (el checklist y los envíos de cleaners lo alargan
+  // después del primer render), para posicionarlo sin que se corte.
+  const [popH, setPopH] = useState(380);
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  // Natural height = fixed chrome + the scroller's full content height (the
+  // popover itself is clamped by max-height, so offsetHeight alone would never
+  // grow). Runs after every render; the equality guard makes it converge.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const scroller = el?.querySelector<HTMLElement>("[data-pop-scroll]");
+    if (!el || !scroller) return;
+    const natural = el.offsetHeight - scroller.clientHeight + scroller.scrollHeight;
+    if (Math.abs(natural - popH) > 1) setPopH(natural);
+  });
 
   // Notas del cleaner ("para el próximo que le toque esta casa"), agrupadas
   // server-side por seriesId (o el propio id si es un evento suelto). Solo
@@ -2814,6 +3072,30 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
     apiFetchEventNotes(event.seriesId || event.id).then((n) => { if (!cancelled) setNotes(n); });
     return () => { cancelled = true; };
   }, [event.id, event.seriesId]);
+
+  // LAB457 — progreso de la checklist para esta ocurrencia puntual (con fotos
+  // que subió el staff). Solo lectura acá; se edita desde EventFormModal.
+  const [checklist, setChecklist] = useState<ChecklistItem[] | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  // Se refresca solo cada 15s mientras el popover está abierto, para ver lo que
+  // el staff va marcando/subiendo sin tener que cerrar y reabrir.
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      apiFetchChecklist(event.seriesId || event.id, event.id).then((c) => { if (!cancelled) setChecklist(c); });
+    };
+    load(); // first load always runs, even if the tab is in the background
+    const t = setInterval(() => { if (!document.hidden) load(); }, 15_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [event.id, event.seriesId]);
+
+  // LAB462 — fotos que el cleaner mandó a central desde esta visita.
+  const [central, setCentral] = useState<CentralSubmissionLite[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    apiFetchCentralForEvent(event.id).then((c) => { if (!cancelled) setCentral(c); });
+    return () => { cancelled = true; };
+  }, [event.id]);
 
   useEffect(() => {
     function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
@@ -2834,7 +3116,7 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
 
   const start = new Date(event.startIso);
   const end = new Date(event.endIso);
-  const VAN = "America/Vancouver";
+  const VAN = TZ;
   const dateStr = start.toLocaleDateString("en-CA", { timeZone: VAN, weekday: "long", month: "long", day: "numeric" });
   const timeStr = event.isAllDay ? "All day"
     : `${start.toLocaleTimeString("en-CA", { timeZone: VAN, hour: "numeric", minute: "2-digit" })} – ${end.toLocaleTimeString("en-CA", { timeZone: VAN, hour: "numeric", minute: "2-digit" })}`;
@@ -2846,31 +3128,35 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
       // outside RequireAdmin's DOM tree — without this class here, the
       // admin-a11y.css descendant selectors (.admin-scope .text-xs, etc.)
       // never match and the popover silently falls back to default sizes.
-      className="admin-scope fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] overflow-hidden"
+      className="admin-scope fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-16px)] flex flex-col overflow-hidden"
       onMouseDown={e => e.stopPropagation()}
       style={(() => {
         // Mobile: always center in the current viewport, regardless of scroll
         // position — anchoring to the tapped event (like desktop does) puts
         // the popover off-screen for events near the top or bottom edge.
         if (isMobile) return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-        const W = 320; const H = 380; // popover size estimates
+        const W = 320; const H = popH; // measured height (see ResizeObserver above)
         if (!anchorRect) return { top: "50%", left: "50%" };
         // Prefer above the anchor; fall back to below if not enough space
         const spaceAbove = anchorRect.top;
         const spaceBelow = window.innerHeight - anchorRect.bottom;
-        const top = spaceAbove >= H || spaceAbove >= spaceBelow
-          ? Math.max(8, anchorRect.top - H - 8)
-          : Math.min(anchorRect.bottom + 8, window.innerHeight - H - 8);
+        const rawTop = spaceAbove >= H || spaceAbove >= spaceBelow
+          ? anchorRect.top - H - 8
+          : anchorRect.bottom + 8;
+        // Always keep the whole popover inside the viewport.
+        const top = Math.max(8, Math.min(rawTop, window.innerHeight - H - 8));
         // Clamp horizontally
         const left = Math.min(Math.max(8, anchorRect.left), window.innerWidth - W - 8);
-        return { top, left };
+        // maxHeight from `top` guarantees the bottom edge stays visible even if
+        // popH is one render behind; the content area scrolls.
+        return { top, left, maxHeight: `calc(100vh - ${top}px - 8px)` };
       })()}
     >
       {/* Color header strip */}
-      <div className="h-2" style={{ background: event.color }} />
+      <div className="h-2 flex-shrink-0" style={{ background: event.color }} />
 
       {/* Action bar */}
-      <div className="flex items-center justify-end gap-0.5 px-3 pt-2 pb-1">
+      <div className="flex items-center justify-end gap-0.5 px-3 pt-2 pb-1 flex-shrink-0">
         <button onClick={() => { onEdit(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Edit"><Pencil size={15} /></button>
         <button onClick={() => { onAssign(event); onClose(); }} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 transition-colors" title="Assign team"><Users size={15} /></button>
         {/* LAB309: opens NewEvent prefilled with this event's data, date/time left blank */}
@@ -2907,8 +3193,8 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
         />
       )}
 
-      {/* Content */}
-      <div className="px-5 pb-5 space-y-3">
+      {/* Content — scrolls when it is taller than the viewport */}
+      <div data-pop-scroll className="px-5 pb-5 space-y-3 overflow-y-auto min-h-0">
         <div>
           <h3 className="text-lg font-medium text-gray-800 leading-snug">{event.summary}</h3>
           <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ background: `${event.color}22`, color: event.color }}>
@@ -2928,7 +3214,7 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
           {event.location && (
             <div className="flex items-start gap-3">
               <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">📍</span>
-              <span>{event.location}</span>
+              <AddressLink address={event.location} />
             </div>
           )}
           {event.assignedCleaners.length > 0 && (
@@ -2943,6 +3229,80 @@ function EventDetailPopover({ event, onClose, onEdit, onDelete, onAssign, onDupl
               <p className="text-xs text-gray-500 line-clamp-4 whitespace-pre-line">{stripClientIdLine(htmlToPlainText(event.description))}</p>
             </div>
           )}
+
+          {checklist && checklist.length > 0 && (
+            <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
+              <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">☑️</span>
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setChecklistOpen((v) => !v)}
+                  aria-expanded={checklistOpen}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Checklist ({checklist.filter((i) => i.completed).length}/{checklist.length} completed)
+                  </span>
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${checklistOpen ? "rotate-180" : ""}`} />
+                </button>
+                {checklistOpen && checklist.map((i) => (
+                  <div key={i.id} className="flex items-center gap-2">
+                    <span
+                      className={`w-4 h-4 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] leading-none ${i.completed ? "bg-green-500 text-white" : "border border-gray-300"}`}
+                      aria-label={i.completed ? "Done" : "Pending"}
+                    >
+                      {i.completed && "✓"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs ${i.completed ? "text-gray-500" : "text-gray-700"}`}>
+                        {i.label}
+                        {!i.isGeneral && <span className="ml-1.5 text-[9px] font-semibold uppercase text-amber-700 bg-amber-100 rounded px-1 py-px">This home only</span>}
+                        {i.requirePhoto && <span className="ml-1 text-[9px] font-semibold uppercase text-blue-700 bg-blue-100 rounded px-1 py-px">Photo required</span>}
+                      </p>
+                      {i.completed && i.completedAt && (
+                        <p className="text-[10px] text-green-600">
+                          Done{i.completedBy ? ` by ${i.completedBy}` : ""} · {new Date(i.completedAt).toLocaleTimeString("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1 flex-shrink-0 max-w-[45%]">
+                      {i.photos.map((p) => (
+                        <button key={p.id} type="button" onClick={() => setViewingPhoto(p.url)} aria-label="View photo">
+                          <img src={p.url} alt="" className="w-8 h-8 rounded object-cover border border-gray-200" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {central.length > 0 && (
+            <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
+              <span className="text-gray-400 mt-0.5 text-base leading-none flex-shrink-0">📸</span>
+              <div className="space-y-2 min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Received from cleaners ({central.length})</p>
+                {central.map((c) => (
+                  <div key={c.id} className="bg-gray-50 rounded-lg px-2.5 py-1.5">
+                    <p className="text-[10px] text-gray-400">
+                      {c.sentBy ?? "Cleaner"} · {new Date(c.createdAt).toLocaleTimeString("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" })}
+                    </p>
+                    {c.comment && <p className="text-xs text-gray-700 whitespace-pre-line">{c.comment}</p>}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {c.photos.map((url) => (
+                        <button key={url} type="button" onClick={() => setViewingPhoto(url)} aria-label="View photo">
+                          <img src={url} alt="" className="w-10 h-10 rounded object-cover border border-gray-200" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {viewingPhoto && <PhotoLightbox url={viewingPhoto} onClose={() => setViewingPhoto(null)} />}
 
           {notes && notes.length > 0 && (
             <div className="flex items-start gap-3 border-t border-gray-100 pt-2.5">
@@ -2988,7 +3348,7 @@ function EventPill({ event, highlightColor, conflictDetail, spotlighted, onEdit,
   }
 
   const start = new Date(event.startIso);
-  const timeLabel = event.isAllDay ? "" : start.toLocaleTimeString("en-CA", { timeZone: "America/Vancouver", hour: "numeric", minute: "2-digit" });
+  const timeLabel = event.isAllDay ? "" : start.toLocaleTimeString("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" });
 
   return (
     <div className="relative" data-event-id={event.id}>
@@ -4808,7 +5168,7 @@ export default function AdminCalendarPage() {
     }
     // After duplicating, jump the visible week/month/day to the new event's date 
     if (duplicatingEvent) {
-      jumpToDate(DateTime.fromISO(saved.startIso).setZone("America/Vancouver").toISODate()!);
+      jumpToDate(DateTime.fromISO(saved.startIso).setZone(TZ).toISODate()!);
     }
     setEditingEvent(null); setCreatingStart(null); setDuplicatingEvent(null); setAssigningEvent(null); setCreatingLunch(false);
   }

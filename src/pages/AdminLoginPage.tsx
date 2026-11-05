@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE_URL } from '../api/client';
+import { STAFF_TOKEN_KEY } from '../api/staffClient';
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // LAB483 — sesión larga opcional.
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -20,16 +23,32 @@ export default function AdminLoginPage() {
       const res = await fetch(`${API_BASE_URL}/api/admin/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(username ? { username, password } : { password }),
+        body: JSON.stringify(
+          username ? { username, password, rememberMe } : { password, rememberMe }
+        ),
       });
 
       if (!res.ok) throw new Error('Login failed');
 
       const data = await res.json();
+      // Cross-login: si son credenciales de un cleaner, el backend las acepta
+      // acá y devuelve role:'cleaner'; el token va bajo la key de staff y se
+      // lo manda a /staff. Espejo en StaffLoginPage.tsx.
+      if (data.role === 'cleaner') {
+        localStorage.setItem(STAFF_TOKEN_KEY, data.token);
+        navigate('/staff');
+        return;
+      }
       localStorage.setItem('admin_blog_token', data.token);
       navigate('/admin/');
-    } catch {
-      setError('Usuario o contraseña incorrectos');
+    } catch (err) {
+      // Un fetch que ni sale tira TypeError: es falta de conexión, no una
+      // contraseña mal puesta.
+      setError(
+        err instanceof TypeError || navigator.onLine === false
+          ? "You're offline. Connect to the internet to sign in."
+          : 'Incorrect username or password'
+      );
     } finally {
       setLoading(false);
     }
@@ -46,7 +65,7 @@ export default function AdminLoginPage() {
         </h1>
 
         <div>
-          <label className="block text-sm mb-1">Usuario</label>
+          <label className="block text-sm mb-1">Username</label>
           <input
             type="text"
             className="w-full border rounded-md px-3 py-2 text-sm"
@@ -58,7 +77,7 @@ export default function AdminLoginPage() {
         </div>
 
         <div>
-          <label className="block text-sm mb-1">Contraseña</label>
+          <label className="block text-sm mb-1">Password</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -78,6 +97,21 @@ export default function AdminLoginPage() {
           </div>
         </div>
 
+        <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Keep me signed in
+            <span className="block text-gray-400">
+              Otherwise the session lasts 7 days in this browser.
+            </span>
+          </span>
+        </label>
+
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
 
         <button
@@ -85,7 +119,7 @@ export default function AdminLoginPage() {
           disabled={loading}
           className="w-full py-2 rounded-md bg-[#031634] text-white text-sm font-montserrat disabled:opacity-60"
         >
-          {loading ? 'Ingresando...' : 'Ingresar'}
+          {loading ? 'Signing in...' : 'Sign in'}
         </button>
 
         <p className="text-center text-xs">

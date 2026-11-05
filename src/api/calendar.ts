@@ -2,9 +2,10 @@
 // All requests are authenticated via the JWT cookie/header
 // that the existing API client pattern already injects.
 import { DateTime } from "luxon";
+import { occurrenceDates, type MonthlyOption, type RecurrencePattern, type Weekday } from "../lib/recurrence";
 
+import { TZ } from '../lib/timezone';
 const BASE = "/api/calendar";
-const TZ = "America/Vancouver";
 
 // ── Shape returned by calendarController's mapEvent() ────────────────────────
 
@@ -91,16 +92,24 @@ export async function getTodayEvents(): Promise<CalendarEvent[]> {
 
 // ── generateCandidateSlots ───────────────────────────────────────────────────
 //
-// LAB-233: calcula las fechas candidatas de una serie recurrente (semanal,
-// quincenal, mensual) sin pegarle a Google Calendar — misma matemática que
-// buildRRule() en el backend (mismo día de semana/mes que el Start, mismo
-// tope por defecto de 1 año si no hay count/until explícito). Se usa para el
-// pre-check de conflictos en EventFormModal antes de confirmar la creación.
+// LAB-233: calcula las fechas candidatas de una serie recurrente sin pegarle a
+// Google Calendar, para el pre-check de conflictos en EventFormModal antes de
+// confirmar la creación. LAB617: ahora soporta cada N semanas, varios días de
+// la semana y "n-ésimo día de la semana del mes" — la matemática de fechas
+// vive en lib/recurrence.ts (espejo de buildRRule() del backend).
 
 export interface RecurrenceInput {
+  /** BIWEEKLY se mantiene por compatibilidad: equivale a WEEKLY con interval 2. */
   freq: "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+  interval?: number;
+  /** Solo WEEKLY: días de la semana (por defecto, el del Start). */
+  byDay?: Weekday[];
+  /** Solo MONTHLY: mismo número de día, o "primer lunes", "último viernes"… */
+  monthly?: MonthlyOption;
   count?: number;
   until?: string; // ISO date
+  /** "Never": sin COUNT ni UNTIL, como Google Calendar. Sin fin ni esto el backend corta al año. */
+  endless?: boolean;
 }
 
 export interface CandidateSlot {
@@ -115,36 +124,31 @@ export function generateCandidateSlots(
 ): CandidateSlot[] {
   const start = DateTime.fromISO(startIso, { zone: TZ });
   const end = DateTime.fromISO(endIso, { zone: TZ });
+  if (!start.isValid || !end.isValid) return [];
   const durationMs = end.toMillis() - start.toMillis();
-  const cap = recurrence.until
-    ? DateTime.fromISO(recurrence.until, { zone: TZ }).endOf("day")
-    : DateTime.now().setZone(TZ).plus({ years: 1 });
-  const maxCount = recurrence.count ?? Infinity;
 
-  const slots: CandidateSlot[] = [];
-  let cursor = start;
-  let n = 0;
-
-  while (n < maxCount && cursor <= cap) {
-    slots.push({
-      startIso: cursor.toISO()!,
-      endIso: cursor.plus({ milliseconds: durationMs }).toISO()!,
-    });
-    n++;
-
-    if (recurrence.freq === "WEEKLY") {
-      cursor = cursor.plus({ weeks: 1 });
-    } else if (recurrence.freq === "BIWEEKLY") {
-      cursor = cursor.plus({ weeks: 2 });
-    } else {
-      // MONTHLY, mismo día del mes que el Start — RFC 5545 SALTEA meses
-      // donde ese día no existe (ej. día 31), no lo "clampea" a fin de mes.
-      let probe = cursor.plus({ months: 1 }).set({ day: 1 });
-      while (probe.daysInMonth! < start.day) probe = probe.plus({ months: 1 }).set({ day: 1 });
-      cursor = probe.set({
-        day: start.day, hour: start.hour, minute: start.minute, second: 0, millisecond: 0,
-      });
-    }
+  const pattern: RecurrencePattern = {
+    freq: recurrence.freq === "MONTHLY" ? "MONTHLY" : "WEEKLY",
+    interval: recurrence.freq === "BIWEEKLY" ? 2 : (recurrence.interval ?? 1),
+    byDay: recurrence.byDay,
+    monthly: recurrence.monthly,
+  };
+  let untilDate: string | null = null;
+  if (recurrence.until) {
+    const u = DateTime.fromISO(recurrence.until, { zone: TZ });
+    if (!u.isValid) return [];
+    untilDate = u.toISODate();
   }
-  return slots;
+
+  // occurrenceDates ya aplica el tope de seguridad (un Start absurdo, p. ej.
+  // año 0002 a medio tipear, o un "until" lejano generaría cientos de miles de
+  // slots y congelaría la página).
+  const time = start.toFormat("HH:mm");
+  return occurrenceDates(pattern, start.toISODate()!, { count: recurrence.count ?? null, untilDate }).map(date => {
+    const s = DateTime.fromISO(`${date}T${time}`, { zone: TZ });
+    return {
+      startIso: s.toISO()!,
+      endIso: s.plus({ milliseconds: durationMs }).toISO()!,
+    };
+  });
 }

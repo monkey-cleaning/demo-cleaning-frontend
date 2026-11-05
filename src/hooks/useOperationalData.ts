@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabaseClient';
 import { DateTime } from 'luxon';
 import { findTeamOverlaps, findOverCapacity } from '../lib/conflictDetection';
 
+import { TZ } from '../lib/timezone';
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
-const TZ = 'America/Vancouver';
 const RISK_DAYS = 21;
 const INACTIVE_DAYS = 30;
 

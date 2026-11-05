@@ -1,5 +1,5 @@
 // LAB425 — fetch wrapper para GET /api/staff/hours/summary.
-import { staffApi } from './staffClient';
+import { cachedGet } from '../offline/cache';
 
 export type QuincenaPeriod = 'current' | 'previous';
 
@@ -14,7 +14,7 @@ export interface StaffHoursSummary {
 export async function getStaffHoursSummary(
   period: QuincenaPeriod
 ): Promise<StaffHoursSummary> {
-  const data = await staffApi<{ ok: boolean } & StaffHoursSummary>(
+  const data = await cachedGet<{ ok: boolean } & StaffHoursSummary>(
     `/api/staff/hours/summary?period=${period}`
   );
   return data;

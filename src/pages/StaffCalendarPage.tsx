@@ -1,20 +1,32 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DateTime } from 'luxon';
-import { ChevronLeft, ChevronRight, MapPin, Users, Repeat, X, LogOut, ArrowLeft, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Users, Repeat, X, LogOut, ArrowLeft, Send, Camera, Images, Loader2, CloudUpload, RefreshCw } from 'lucide-react';
 import {
   getStaffWeekEvents,
   getStaffMonthEvents,
   getEventNotes,
   addEventNote,
+  getChecklist,
+  setChecklistCompletion,
+  uploadChecklistPhoto,
+  deleteChecklistPhoto,
+  getCentralSubmissions,
+  sendToCentral,
+  type CentralSubmission,
   type StaffCalendarEvent,
   type EventNote,
+  type ChecklistItem,
 } from '../api/staffCalendar';
-import { STAFF_TOKEN_KEY } from '../api/staffClient';
+import { isNetworkError } from '../api/staffClient';
+import { signOutStaff } from '../offline/session';
+import { useOfflineStatus } from '../offline/status';
 import { htmlToPlainText } from '../lib/htmlToPlainText';
+import { TZ, atOffset } from '../lib/timezone';
+import PhotoLightbox from '../components/PhotoLightbox';
+import AddressLink from '../components/AddressLink';
 
-const TZ = 'America/Vancouver';
 const HOUR_H = 60; // px per hour at zoom=1 — same base scale as AdminCalendarPage's WeekView/DayView
 const START_H = 0;
 const END_H = 24;
@@ -101,8 +113,8 @@ function fmtHour(h: number): string {
 // pinched (reported from a real-device recording), since the floor's size
 // depends on hourPx/zoom.
 function eventHours(event: StaffCalendarEvent, hourPx: number) {
-  const start = DateTime.fromISO(event.startIso, { zone: TZ });
-  const end = DateTime.fromISO(event.endIso, { zone: TZ });
+  const start = atOffset(event.startIso);
+  const end = atOffset(event.endIso);
   const startHour = start.hour + start.minute / 60;
   let trueEndHour = end.hour + end.minute / 60;
   if (trueEndHour <= startHour) trueEndHour = 24; // guard against a zero/negative-length span
@@ -276,13 +288,36 @@ export default function StaffCalendarPage() {
   // 'week' value is ever reached on a phone. Default is Month per the
   // 2026-09-11 daily — it's what should show "from the moment you open the
   // calendar".
-  const [view, setView] = useState<ViewMode>('month');
+  //
+  // LAB482 - el home linkea una visita puntual como
+  // /staff/calendar?event=<id>&date=<yyyy-mm-dd>. Se lee en el inicializador de
+  // los estados, no en un efecto: asi la pantalla arranca directo en el dia
+  // correcto y hace UNA sola consulta, en vez de pedir el mes de hoy y volver a
+  // pedir el dia un render despues.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedDate = searchParams.get('date');
+  const linkedEventId = useRef(searchParams.get('event'));
+
+  const [view, setView] = useState<ViewMode>(() => (linkedDate ? 'day' : 'month'));
   const effectiveView: ViewMode = isMobile && view === 'week' ? 'day' : view;
-  const [anchor, setAnchor] = useState(() => DateTime.now().setZone(TZ).startOf('day'));
+  const [anchor, setAnchor] = useState(() =>
+    linkedDate
+      ? DateTime.fromISO(linkedDate, { zone: TZ }).startOf('day')
+      : DateTime.now().setZone(TZ).startOf('day')
+  );
   const [events, setEvents] = useState<StaffCalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ event: StaffCalendarEvent; rect?: DOMRect } | null>(null);
+  // LAB482 - recarga a mano. Los eventos salen de Google Calendar y la pantalla
+  // los pide una vez por rango: si la oficina agrega o cambia una visita con la
+  // app abierta, sin esto habia que salir y volver a entrar.
+  const [reloadKey, setReloadKey] = useState(0);
+  // Que recarga es "a mano": esa, y solo esa, le pide al backend que saltee su
+  // cache de meses. Se guarda el numero de recarga en vez de un booleano que se
+  // consume, porque en desarrollo React corre cada efecto dos veces y un
+  // booleano se gastaba en la primera pasada.
+  const forcedReload = useRef(-1);
   // Daily 2026-09-11 — pinch-to-zoom on the Day view's hour grid (1 = default).
   const [zoom, setZoom] = useState(1);
   const hourPx = HOUR_H * zoom;
@@ -308,7 +343,9 @@ export default function StaffCalendarPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const fetcher = effectiveView === 'month' ? getStaffMonthEvents(anchor) : getStaffWeekEvents(weekStart);
+    const force = forcedReload.current === reloadKey;
+    const fetcher =
+      effectiveView === 'month' ? getStaffMonthEvents(anchor, force) : getStaffWeekEvents(weekStart, force);
     fetcher
       .then((data) => {
         if (cancelled) return;
@@ -327,7 +364,24 @@ export default function StaffCalendarPage() {
     // + week/month start) — depending on it instead of the DateTime/ViewMode
     // instances avoids refetching on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeKey]);
+  }, [rangeKey, reloadKey]);
+
+  // LAB482 - ya cargado el dia que pidio el home, se abre la ficha de esa
+  // visita. El id se saca de la URL una sola vez (useRef) y la URL se limpia
+  // enseguida, asi volver atras o recargar no la vuelve a abrir sola.
+  useEffect(() => {
+    if (!linkedEventId.current || loading) return;
+    const id = linkedEventId.current;
+    linkedEventId.current = null;
+    const ev = events.find((e) => e.id === id);
+    if (ev) setSelected({ event: ev });
+  }, [loading, events]);
+
+  useEffect(() => {
+    if (searchParams.has('event') || searchParams.has('date')) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const days = effectiveView === 'week' ? Array.from({ length: 7 }, (_, i) => weekStart.plus({ days: i })) : [anchor];
 
@@ -528,6 +582,13 @@ export default function StaffCalendarPage() {
     setSelected(null);
     setAnchor(DateTime.now().setZone(TZ).startOf('day'));
   }
+  function refresh() {
+    setSelected(null);
+    setLoading(true);
+    setError(null);
+    forcedReload.current = reloadKey + 1;
+    setReloadKey((k) => k + 1);
+  }
   function changeView(v: ViewMode) {
     setSelected(null);
     setView(v);
@@ -563,9 +624,8 @@ export default function StaffCalendarPage() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem(STAFF_TOKEN_KEY);
-    navigate('/staff/login');
+  const handleLogout = async () => {
+    if (await signOutStaff()) navigate('/staff/login');
   };
 
   const rangeLabel =
@@ -605,6 +665,14 @@ export default function StaffCalendarPage() {
           </button>
           <button onClick={goNext} aria-label="Next" className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500">
             <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            aria-label="Refresh"
+            className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 disabled:text-gray-300"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
           <span className="text-sm font-medium text-[#031634] ml-1">{rangeLabel}</span>
         </div>
@@ -790,8 +858,8 @@ function EventPopover({
     };
   }, [onClose]);
 
-  const start = DateTime.fromISO(event.startIso, { zone: TZ });
-  const end = DateTime.fromISO(event.endIso, { zone: TZ });
+  const start = atOffset(event.startIso);
+  const end = atOffset(event.endIso);
   const dateStr = start.toFormat('cccc, LLLL d');
   const timeStr = event.isAllDay ? 'All day' : `${start.toFormat('h:mm a')} – ${end.toFormat('h:mm a')}`;
   const notes = htmlToPlainText(event.notes);
@@ -799,7 +867,13 @@ function EventPopover({
   return createPortal(
     <div
       ref={ref}
-      className="fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden flex flex-col"
+      // staff-scope: este nodo se monta con createPortal en <body>, o sea FUERA
+      // del wrapper de RequireStaff. Sin la clase acá, los selectores de
+      // staff-a11y.css (.staff-scope .text-xs, etc.) no matchean y el checklist
+      // y las notas — lo que más miran las cleaners — quedaban con la letra más
+      // chica de toda la app. Mismo mecanismo que "admin-scope" en
+      // AdminCalendarPage.
+      className="staff-scope fixed z-[70] bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.2)] border border-gray-100 w-80 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden flex flex-col"
       onMouseDown={(e) => e.stopPropagation()}
       style={(() => {
         if (isMobile || !anchorRect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
@@ -835,7 +909,8 @@ function EventPopover({
           {event.location && (
             <div className="flex items-start gap-2">
               <MapPin size={15} className="mt-0.5 text-gray-400 flex-shrink-0" />
-              <span>{event.location}</span>
+              {/* LAB482 — tocar la dirección abre Google Maps. */}
+              <AddressLink address={event.location} />
             </div>
           )}
 
@@ -860,10 +935,493 @@ function EventPopover({
           )}
         </div>
 
+        {!event.isNonService && (
+          <>
+            <EventChecklistSection event={event} />
+
+            <OtherPhotosSection event={event} />
+          </>
+        )}
+
         <EventNotesSection event={event} />
       </div>
     </div>,
     document.body
+  );
+}
+
+// LAB457 — indicaciones que el admin cargó para este evento/serie, con
+// check-off y foto de respaldo. Compartido por todo el equipo asignado a la
+// visita: no hay estado por-persona, cualquiera del team lo marca.
+const CHECKLIST_GRACE_MS = 60 * 60 * 1000;
+
+// staffApi tira `API <status> - <body>`; si el body es JSON con `error` (ej. el
+// 403 de fuera de ventana), se muestra ese mensaje en vez de uno genérico.
+function apiErrorMessage(e: unknown, fallback: string): string {
+  if (isNetworkError(e)) return e.message;
+  const raw = e instanceof Error ? e.message : '';
+  const idx = raw.indexOf(' - ');
+  if (idx !== -1) {
+    try {
+      const parsed = JSON.parse(raw.slice(idx + 3));
+      if (typeof parsed?.error === 'string') return parsed.error;
+    } catch {
+      /* body no era JSON */
+    }
+  }
+  return fallback;
+}
+
+// El celular decide qué ofrecer según el atributo `capture`: con
+// capture="environment" abre la cámara directo, sin el atributo abre la galería.
+// Se pone/saca sobre el mismo <input> justo antes de abrirlo (no va en el JSX,
+// así React no lo pisa) para no duplicar un input por cada opción.
+function openPicker(input: HTMLInputElement | null | undefined, source: 'camera' | 'gallery') {
+  if (!input) return;
+  if (source === 'camera') input.setAttribute('capture', 'environment');
+  else input.removeAttribute('capture');
+  input.click();
+}
+
+function EventChecklistSection({ event }: { event: StaffCalendarEvent }) {
+  const [items, setItems] = useState<ChecklistItem[] | null>(null);
+  // Misma regla que eventChecklistController.js (que es la que manda): solo
+  // se puede marcar/subir fotos desde el inicio del evento hasta 1h después de
+  // su fin. Acá se replica nomás para deshabilitar los controles y explicar por qué.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const startMs = atOffset(event.startIso).toMillis();
+  const endMs = atOffset(event.endIso).toMillis();
+  const lockReason =
+    now < startMs
+      ? `You can update this checklist once the visit starts (${atOffset(event.startIso).toFormat('ccc h:mm a')}).`
+      : now > endMs + CHECKLIST_GRACE_MS
+        ? 'This visit is over — the checklist can only be updated until 1 hour after it ends.'
+        : null;
+  const locked = lockReason !== null;
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [checklistError, setChecklistError] = useState<string | null>(null);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [viewing, setViewing] = useState<{ item: ChecklistItem; photoId: string; url: string } | null>(null);
+  // LAB463 — cuando termina una sincronización, se vuelve a leer (lo pendiente
+  // pasa a "guardado" y aparecen los cambios de otros cleaners).
+  const { syncTick } = useOfflineStatus();
+
+  useEffect(() => {
+    let cancelled = false;
+    getChecklist(event.seriesKey, event.id)
+      .then((i) => {
+        if (!cancelled) setItems(i);
+      })
+      .catch(() => {
+        if (!cancelled) setItems((prev) => prev ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [event.seriesKey, event.id, syncTick]);
+
+  async function handleToggle(item: ChecklistItem) {
+    if (busyId || locked) return;
+    setBusyId(item.id);
+    setChecklistError(null);
+    const nextCompleted = !item.completed;
+    try {
+      const result = await setChecklistCompletion(item.id, event.id, nextCompleted);
+      setItems((prev) => prev?.map((i) => (i.id === item.id ? { ...i, ...result } : i)) ?? prev);
+    } catch (e) {
+      setChecklistError(apiErrorMessage(e, 'Could not update the checklist. Please try again.'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handlePhoto(item: ChecklistItem, file: File | undefined) {
+    if (!file || busyId || locked) return;
+    setBusyId(item.id);
+    setChecklistError(null);
+    try {
+      const photo = await uploadChecklistPhoto(item.id, event.id, file);
+      setItems((prev) =>
+        prev?.map((i) => (i.id === item.id ? { ...i, photos: [...i.photos, photo] } : i)) ?? prev
+      );
+    } catch (e) {
+      setChecklistError(apiErrorMessage(e, 'Could not upload the photo. Please try again.'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDeletePhoto(item: ChecklistItem, photoId: string) {
+    if (busyId || locked) return;
+    setBusyId(item.id);
+    setChecklistError(null);
+    try {
+      await deleteChecklistPhoto(item.id, photoId);
+      setItems((prev) =>
+        prev?.map((i) => {
+          if (i.id !== item.id) return i;
+          const photos = i.photos.filter((p) => p.id !== photoId);
+          // Mirrors the backend: a photo-required item cannot stay completed without a photo.
+          return i.requirePhoto && photos.length === 0
+            ? { ...i, photos, completed: false, completedAt: null, completedBy: null }
+            : { ...i, photos };
+        }) ?? prev
+      );
+    } catch (e) {
+      setChecklistError(apiErrorMessage(e, 'Could not delete the photo. Please try again.'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (items === null) {
+    return (
+      <div className="border-t border-gray-100 pt-2.5">
+        <p className="text-xs text-gray-400">Loading checklist...</p>
+      </div>
+    );
+  }
+  if (items.length === 0) return null;
+
+  const doneCount = items.filter((i) => i.completed).length;
+  const pct = Math.round((doneCount / items.length) * 100);
+
+  return (
+    <div className="border-t border-gray-100 pt-2.5 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Checklist</p>
+        <p className="text-[11px] font-medium text-gray-500">
+          {doneCount}/{items.length} completed
+        </p>
+      </div>
+      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${doneCount === items.length ? 'bg-green-500' : 'bg-[#031634]'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {lockReason && <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1.5">{lockReason}</p>}
+      <div className="space-y-2">
+        {items.map((item) => {
+          const needsPhoto = item.requirePhoto && item.photos.length === 0;
+          return (
+            <div
+              key={item.id}
+              className={`flex items-start gap-2 ${
+                item.isGeneral ? '' : 'rounded-lg bg-amber-50/70 border border-amber-100 px-2 py-1.5 -mx-1'
+              }`}
+            >
+              <button
+                onClick={() => handleToggle(item)}
+                disabled={busyId === item.id || locked || (needsPhoto && !item.completed)}
+                aria-label={item.completed ? 'Mark as not completed' : 'Mark as completed'}
+                className={`mt-0.5 w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors disabled:opacity-40 ${
+                  item.completed ? 'bg-[#031634] border-[#031634]' : 'border-gray-300'
+                }`}
+              >
+                {item.completed && <span className="text-white text-[10px] leading-none">✓</span>}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                  {item.label}
+                </p>
+                {(!item.isGeneral || item.requirePhoto) && (
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {!item.isGeneral && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-px">
+                        This home only
+                      </span>
+                    )}
+                    {item.requirePhoto && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-100 rounded px-1.5 py-px">
+                        Photo required
+                      </span>
+                    )}
+                  </div>
+                )}
+                {item.completed && item.completedAt && (
+                  <p className="text-[10px] text-green-600 mt-0.5">
+                    Completed{item.completedBy ? ` by ${item.completedBy}` : ''} ·{' '}
+                    {DateTime.fromISO(item.completedAt, { zone: TZ }).toFormat('h:mm a')}
+                  </p>
+                )}
+                {item.pendingSync && (
+                  <p className="text-[10px] text-blue-600 mt-0.5">Saved on this device — will sync automatically.</p>
+                )}
+                {needsPhoto && !item.completed && !locked && (
+                  <p className="text-[10px] text-blue-600 mt-0.5">Add a photo to complete this item.</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {item.photos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      onClick={() => setViewing({ item, photoId: photo.id, url: photo.url })}
+                      aria-label="View photo"
+                      className="flex-shrink-0"
+                    >
+                      <span className="relative block">
+                        <img
+                          src={photo.url}
+                          alt=""
+                          className={`w-10 h-10 rounded object-cover border ${photo.pending ? 'border-blue-300 opacity-80' : 'border-gray-200'}`}
+                        />
+                        {photo.pending && (
+                          <span className="absolute -bottom-1 -right-1 bg-blue-500 text-white rounded-full p-0.5" title="Waiting to sync">
+                            <CloudUpload size={9} />
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => openPicker(fileInputs.current[item.id], 'camera')}
+                    disabled={busyId === item.id || locked}
+                    className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 disabled:opacity-40"
+                  >
+                    {busyId === item.id ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+                    Take photo
+                  </button>
+                  <button
+                    onClick={() => openPicker(fileInputs.current[item.id], 'gallery')}
+                    disabled={busyId === item.id || locked}
+                    className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700 disabled:opacity-40"
+                  >
+                    <Images size={12} /> Gallery
+                  </button>
+                  <input
+                    ref={(el) => { fileInputs.current[item.id] = el; }}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      handlePhoto(item, file);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {checklistError && <p className="text-[11px] text-red-500">{checklistError}</p>}
+      {viewing && (
+        <PhotoLightbox
+          url={viewing.url}
+          onClose={() => setViewing(null)}
+          onDelete={
+            locked
+              ? undefined
+              : async () => {
+                  await handleDeletePhoto(viewing.item, viewing.photoId);
+                  setViewing(null);
+                }
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+// LAB462 — fotos sueltas + comentario corto, fuera del checklist (una mancha,
+// un vidrio roto, falta de insumos...). Van directo a la oficina y quedan
+// asociadas a la visita, al cliente y al cleaner que las manda. En el backend
+// y en el admin esto es "central_submissions" / "Received from cleaners"; para
+// el cleaner se llama "Other photos" porque lo que hace es justamente agregar
+// fotos que el checklist no cubre.
+const CENTRAL_MAX_PHOTOS = 10;
+
+function OtherPhotosSection({ event }: { event: StaffCalendarEvent }) {
+  const [sent, setSent] = useState<CentralSubmission[] | null>(null);
+  const [open, setOpen] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [comment, setComment] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const { syncTick } = useOfflineStatus();
+
+  // Same write window as the checklist (the backend is the source of truth).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const startMs = atOffset(event.startIso).toMillis();
+  const endMs = atOffset(event.endIso).toMillis();
+  const lockReason =
+    now < startMs
+      ? `You can add photos once the visit starts (${atOffset(event.startIso).toFormat('ccc h:mm a')}).`
+      : now > endMs + CHECKLIST_GRACE_MS
+        ? 'This visit is over — photos can only be added until 1 hour after it ends.'
+        : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    getCentralSubmissions(event.id)
+      .then((r) => {
+        if (!cancelled) setSent(r);
+      })
+      .catch(() => {
+        if (!cancelled) setSent((prev) => prev ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [event.id, syncTick]);
+
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+  useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
+
+  function reset() {
+    setOpen(false);
+    setFiles([]);
+    setComment('');
+    setError(null);
+  }
+
+  async function handleSend() {
+    if (!files.length || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      const submission = await sendToCentral(event.id, files, comment.trim());
+      setSent((prev) => [...(prev ?? []), submission]);
+      reset();
+    } catch (e) {
+      setError(apiErrorMessage(e, 'Could not send these photos. Please try again.'));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-gray-100 pt-2.5 space-y-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Other photos</p>
+
+      {sent && sent.length > 0 && (
+        <div className="space-y-1.5">
+          {sent.map((s) => (
+            <div key={s.id} className="bg-green-50 rounded-lg px-2.5 py-1.5">
+              <p className={`text-[10px] font-medium ${s.pending ? 'text-blue-700' : 'text-green-700'}`}>
+                {s.pending ? 'Saved on this device — will send automatically' : 'Sent'}{' '}
+                {DateTime.fromISO(s.createdAt, { zone: TZ }).toFormat('h:mm a')}
+                {s.sentBy ? ` by ${s.sentBy}` : ''} · {s.photos.length} photo{s.photos.length === 1 ? '' : 's'}
+              </p>
+              {s.comment && <p className="text-xs text-gray-600 whitespace-pre-line">{s.comment}</p>}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {s.photos.map((url) => (
+                  <button key={url} onClick={() => setViewing(url)} aria-label="View photo">
+                    <img src={url} alt="" className="w-9 h-9 rounded object-cover border border-gray-200" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!open ? (
+        <>
+          <button
+            onClick={() => setOpen(true)}
+            disabled={lockReason !== null}
+            className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-white bg-[#031634] rounded-lg py-2 disabled:opacity-40"
+          >
+            <Camera size={13} /> Add other photos
+          </button>
+          {lockReason && <p className="text-[11px] text-amber-600 bg-amber-50 rounded-lg px-2 py-1.5">{lockReason}</p>}
+          <p className="text-[10px] text-gray-400">
+            Photos that aren&apos;t part of the checklist — a stain, damage, missing supplies… The office gets them right away.
+          </p>
+        </>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {previews.map((url, idx) => (
+              <div key={url} className="relative">
+                <img src={url} alt="" className="w-14 h-14 rounded-lg object-cover border border-gray-200" />
+                <button
+                  onClick={() => setFiles((prev) => prev.filter((_, i) => i !== idx))}
+                  disabled={sending}
+                  aria-label="Remove photo"
+                  className="absolute -top-1.5 -right-1.5 bg-gray-800 text-white rounded-full p-0.5"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+            {files.length < CENTRAL_MAX_PHOTOS && (
+              <>
+                <button
+                  onClick={() => openPicker(fileInput.current, 'camera')}
+                  disabled={sending}
+                  className="w-14 h-14 rounded-lg border border-dashed border-gray-300 text-gray-400 flex flex-col items-center justify-center gap-0.5"
+                  aria-label="Take photo"
+                >
+                  <Camera size={16} />
+                  <span className="text-[9px] leading-none">Camera</span>
+                </button>
+                <button
+                  onClick={() => openPicker(fileInput.current, 'gallery')}
+                  disabled={sending}
+                  className="w-14 h-14 rounded-lg border border-dashed border-gray-300 text-gray-400 flex flex-col items-center justify-center gap-0.5"
+                  aria-label="Choose from gallery"
+                >
+                  <Images size={16} />
+                  <span className="text-[9px] leading-none">Gallery</span>
+                </button>
+              </>
+            )}
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []);
+                e.target.value = '';
+                setFiles((prev) => [...prev, ...picked].slice(0, CENTRAL_MAX_PHOTOS));
+              }}
+            />
+          </div>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={500}
+            rows={2}
+            placeholder="Short comment, e.g. Carpet stain on arrival"
+            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSend}
+              disabled={!files.length || sending}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-white bg-[#031634] rounded-lg py-2 disabled:opacity-40"
+            >
+              {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {sending ? 'Sending…' : files.length ? `Send (${files.length})` : 'Add a photo to send'}
+            </button>
+            <button
+              onClick={reset}
+              disabled={sending}
+              className="text-xs text-gray-500 px-3 py-2 rounded-lg hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
+      {viewing && <PhotoLightbox url={viewing} onClose={() => setViewing(null)} />}
+    </div>
   );
 }
 
@@ -900,8 +1458,12 @@ function EventNotesSection({ event }: { event: StaffCalendarEvent }) {
       const note = await addEventNote(event.seriesKey, event.id, body);
       setNotes((prev) => [...(prev ?? []), note]);
       setDraft('');
-    } catch {
-      setNotesError('Could not save the note. Please try again.');
+    } catch (e) {
+      setNotesError(
+        isNetworkError(e)
+          ? "You're offline. Notes need a connection — try again when you're back online."
+          : 'Could not save the note. Please try again.'
+      );
     } finally {
       setSending(false);
     }

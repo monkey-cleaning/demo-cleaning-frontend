@@ -1,0 +1,17 @@
+{
+  "name": "Demo Cleaning Staff",
+  "short_name": "Staff",
+  "description": "Your visits, instructions and checklists — works offline.",
+  "start_url": "/staff",
+  "scope": "/staff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#031634",
+  "theme_color": "#031634",
+  "icons": [
+    { "src": "/staff-icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/staff-icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/staff-icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "prefer_related_applications": false
+}

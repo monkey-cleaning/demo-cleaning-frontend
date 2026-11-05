@@ -34,13 +34,28 @@ export function shiftQuincena(q: Quincena, delta: number): Quincena {
   return { year, month: month + 1, half: (half + 1) as 1 | 2 };
 }
 
-const MONTH_LABELS = [
+export const MONTH_LABELS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
 export function quincenaLabel(q: Quincena): string {
   return `Q${q.half} ${MONTH_LABELS[q.month - 1]} ${q.year}`;
+}
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// Título legible del período: "September 1 – 15, 2026" (Q1) / "September
+// 16 – 30, 2026" (Q2, hasta el último día real del mes). Pura aritmética de
+// calendario — mismo criterio que quincenaRange del backend (día 1-15 /
+// 16-fin de mes), sin depender del huso del navegador.
+export function quincenaTitle(q: Quincena): string {
+  const lastDay = new Date(q.year, q.month, 0).getDate();
+  const [from, to] = q.half === 1 ? [1, 15] : [16, lastDay];
+  return `${MONTH_NAMES[q.month - 1]} ${from} – ${to}, ${q.year}`;
 }
 
 // true si `q` es la quincena actual o una futura — usado para deshabilitar

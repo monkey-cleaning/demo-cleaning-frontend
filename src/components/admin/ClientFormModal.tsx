@@ -211,6 +211,7 @@ export function ClientFormModal({
     if (!form.first_name.trim()) { setError("First name is required"); return; }
     if (!form.last_name.trim()) { setError("Last name is required"); return; }
     if (!form.email.trim()) { setError("Email is required"); return; }
+    if (!isEdit && (form.rate === "" || !(parseFloat(form.rate) >= 0))) { setError("Rate ($/hr) is required"); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       setError("Please enter a valid email address"); return;
     }
@@ -347,7 +348,7 @@ export function ClientFormModal({
                 <option value="Evening (5pm–8pm)">Evening (5pm–8pm)</option>
               </select>
             </div>
-            <div><label className={lbl}>Rate ($/hr)</label>
+            <div><label className={lbl}>Rate ($/hr){!isEdit && " *"}</label>
               <input type="number" min="0" step="0.5" className={inp} value={form.rate}
                 onChange={e => set("rate", e.target.value)} placeholder="0.00" /></div>
           </div>

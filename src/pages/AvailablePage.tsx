@@ -4,6 +4,7 @@ import { format, isSameDay } from "date-fns";
 import { RefreshCw, Home } from "lucide-react";
 import CalendarPicker from "../components/CalendarPicker";
 
+import { TZ } from '../lib/timezone';
 function loadRecaptchaScript(siteKey: string) {
   return new Promise<void>((resolve, reject) => {
     if (window.grecaptcha) {
@@ -47,7 +48,6 @@ declare global {
 
 const API_BASE          = (import.meta as any).env?.VITE_API_URL?.replace(/\/$/, "") || "";
 const RECAPTCHA_SITE_KEY = (import.meta as any).env?.VITE_RECAPTCHA_SITE_KEY || "";
-const TZ                = "America/Vancouver";
 const SLOTS_PER_PAGE    = 4;
 
 // ---------------------------------------------------------------------------

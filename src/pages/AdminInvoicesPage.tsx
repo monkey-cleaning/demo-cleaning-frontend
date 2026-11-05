@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Send, Upload, Trash2, ArrowLeft, AlertCircle, X, ChevronLeft, ChevronRight, Search, CalendarDays, History } from 'lucide-react';
+import { Plus, Send, Upload, Trash2, ArrowLeft, AlertCircle, X, ChevronLeft, ChevronRight, Search, CalendarDays, History, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   listInvoices, createInvoice, publishInvoice, sendInvoiceEmail, deleteInvoice,
@@ -10,13 +10,14 @@ import { api } from '../api/client';
 import RequireAdmin from '../components/admin/RequireAdmin';
 import AdminNavbar from '../components/admin/AdminNavbar';
 import HistoryDrawer from '../components/admin/HistoryDrawer';
+import InvoiceDetailDrawer from '../components/admin/InvoiceDetailDrawer';
 import ConfirmModal from '../components/admin/ConfirmModal';
 import { ClientFormModal } from '../components/admin/ClientFormModal';
 import { invoicesAdminCopy } from '../copy/invoices';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
+export function fmt(n: number) {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n);
 }
 
@@ -38,13 +39,13 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Client search ─────────────────────────────────────────────────────────────
 
-interface Client { id: string; name?: string; first_name?: string; last_name?: string; email: string; }
+export interface Client { id: string; name?: string; first_name?: string; last_name?: string; email: string; }
 
-function clientDisplayName(c: { name?: string; first_name?: string; last_name?: string }) {
+export function clientDisplayName(c: { name?: string; first_name?: string; last_name?: string }) {
   return c.name ?? ([c.first_name, c.last_name].filter(Boolean).join(' ') || '(no name)');
 }
 
-async function searchClients(q: string): Promise<Client[]> {
+export async function searchClients(q: string): Promise<Client[]> {
   if (!q || q.length < 2) return [];
   const res = await api(`/api/admin/clients/search?q=${encodeURIComponent(q)}&limit=8`) as { ok: boolean; clients: Client[] };
   return Array.isArray(res?.clients) ? res.clients : [];
@@ -461,6 +462,13 @@ export default function AdminInvoicesPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
+  const [detailEditMode, setDetailEditMode] = useState(false);
+
+  function openInvoiceDetail(inv: Invoice, edit = false) {
+    setDetailEditMode(edit);
+    setDetailInvoice(inv);
+  }
 
   const status = searchParams.get('status') ?? '';
   const page = Number(searchParams.get('page') ?? 1);
@@ -657,7 +665,11 @@ export default function AdminInvoicesPage() {
                     <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-300 text-sm">No invoices found</td></tr>
                   ) : (
                     invoices.map(inv => (
-                      <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                      <tr
+                        key={inv.id}
+                        onClick={() => openInvoiceDetail(inv)}
+                        className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                      >
                         <td className="px-5 py-3.5">
                           <p className="font-medium text-navy truncate max-w-[160px]">
                             {inv.clients ? clientDisplayName(inv.clients) : (inv.quickbooks_customer_name ?? 'Unknown')}
@@ -675,10 +687,17 @@ export default function AdminInvoicesPage() {
                         </td>
                         <td className="px-5 py-3.5 text-right font-semibold text-navy">{fmt(inv.total_amount)}</td>
                         <td className="px-5 py-3.5"><StatusBadge status={inv.status} /></td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
                             {inv.status === 'draft' && (
                               <>
+                                <button
+                                  onClick={() => openInvoiceDetail(inv, true)}
+                                  title="Edit draft"
+                                  className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                                >
+                                  <Pencil size={14} />
+                                </button>
                                 <button
                                   onClick={() => handlePublish(inv.id)}
                                   disabled={actionLoading === inv.id + '-publish'}
@@ -732,7 +751,11 @@ export default function AdminInvoicesPage() {
               ) : (
                 <ul className="divide-y divide-gray-50">
                   {invoices.map(inv => (
-                    <li key={inv.id} className="px-4 py-4">
+                    <li
+                      key={inv.id}
+                      onClick={() => openInvoiceDetail(inv)}
+                      className="px-4 py-4 active:bg-gray-50 transition-colors cursor-pointer"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-navy truncate">
@@ -756,9 +779,18 @@ export default function AdminInvoicesPage() {
                         </div>
                       </div>
                       {/* Actions row */}
-                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        className="flex gap-2 mt-3 pt-3 border-t border-gray-50"
+                      >
                         {inv.status === 'draft' && (
                           <>
+                            <button
+                              onClick={() => openInvoiceDetail(inv, true)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-xs font-semibold transition-colors active:bg-gray-100"
+                            >
+                              <Pencil size={12} /> Edit
+                            </button>
                             <button
                               onClick={() => handlePublish(inv.id)}
                               disabled={actionLoading === inv.id + '-publish'}
@@ -849,6 +881,20 @@ export default function AdminInvoicesPage() {
               }
             }}
             onConfirm={() => void performDelete(pendingDeleteId)}
+          />
+        )}
+
+        {detailInvoice && (
+          <InvoiceDetailDrawer
+            invoice={detailInvoice}
+            startInEditing={detailEditMode}
+            onClose={() => { setDetailInvoice(null); setDetailEditMode(false); }}
+            onUpdated={(updated) => {
+              setDetailInvoice(updated);
+              setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
+              showToast('Invoice updated ✓');
+            }}
+            onShowHistory={() => setHistoryInvoice(detailInvoice)}
           />
         )}
 
